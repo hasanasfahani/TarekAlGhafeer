@@ -1,9 +1,9 @@
 import { Dumbbell, Users, Trophy } from "lucide-react";
 import { motion } from "framer-motion";
 
-import section1Screenshot from "@assets/Section_1_1765021425140.png";
-import challengeLeaderboardScreenshot from "@assets/challenge-leaderboard-prizes-2026-05-29.png";
-import challengeMainScreenshot from "@assets/challenge-main-community-2026-05-29.png";
+import section1Screenshot from "@assets/optimized/workout-program.webp";
+import challengeLeaderboardScreenshot from "@assets/optimized/challenge-leaderboard-prizes.webp";
+import challengeMainScreenshot from "@assets/optimized/challenge-main-community.webp";
 import { useLanguage } from "@/lib/i18n";
 
 interface BenefitRowProps {
@@ -28,6 +28,8 @@ const IPhoneMockup = ({ screenshot, alt }: { screenshot: string; alt: string }) 
           src={screenshot} 
           alt={alt} 
           className="w-full h-auto"
+          loading="lazy"
+          decoding="async"
         />
       </div>
     </div>

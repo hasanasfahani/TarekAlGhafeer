@@ -8,9 +8,9 @@ import {
 } from "@/components/ui/carousel";
 import { useLanguage } from "@/lib/i18n";
 
-import transformation1 from "@assets/real-experience/tarek-transformation-1.jpg";
-import transformation2 from "@assets/real-experience/tarek-transformation-2.jpg";
-import transformation3 from "@assets/real-experience/tarek-transformation-3.jpg";
+import transformation1 from "@assets/optimized/tarek-transformation-1.webp";
+import transformation2 from "@assets/optimized/tarek-transformation-2.webp";
+import transformation3 from "@assets/optimized/tarek-transformation-3.webp";
 
 const transformations = [
   {
@@ -68,6 +68,8 @@ const TransformationCarousel = () => {
                   src={item.image} 
                   alt={item.label} 
                   className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                  loading="lazy"
+                  decoding="async"
                 />
               </div>
             </CarouselItem>

@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Info } from "lucide-react";
 import { motion } from "framer-motion";
-import coachTarek from "@assets/coach-tarek-al-ghafeer-hero-2026-05-29.jpg";
+import coachTarek from "@assets/optimized/coach-tarek-hero.webp";
 import { useLanguage } from "@/lib/i18n";
 
 export default function Hero() {
@@ -15,6 +15,8 @@ export default function Hero() {
           src={coachTarek} 
           alt="Coach Tarek Al Ghafeer" 
           className="absolute inset-0 w-full h-full object-cover object-top"
+          loading="eager"
+          decoding="async"
           style={{
             filter: 'brightness(0.75) contrast(1.1) saturate(0.85) sepia(0.05) hue-rotate(-5deg)'
           }}
