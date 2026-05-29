@@ -1,0 +1,95 @@
+Build a Mobile-First Modern Fitness Landing Page — Coach Tarek Al Ghafeer Program
+Create a mobile-first, responsive landing page for a personal fitness coach named Coach Tarek Al Ghafeer, inspired visually by the previously attached example — dark futuristic UI, neon highlight accents, bold typography, and clean modular sections.
+The design should be designed primarily for mobile screens (small viewports) and then scale up gracefully to tablet and desktop using responsive breakpoints (e.g. min-width media queries).
+🎯 Visual Style Requirements
+Dark Modern Theme: near-black background (#050505 or similar)
+Neon Lime Accent Color for buttons, highlights, icons (similar to the reference).
+Secondary tiny accents allowed using Fitnet brand colors:
+#00BF6B (green) and #FF8A3B (orange)
+Typography
+Hero heading → oversized, bold, condensed (but still readable on small screens).
+Body → clean sans serif with high contrast.
+Rounded cards, soft shadows, premium feel.
+Mobile-first CSS:
+Start with a single-column layout for small screens.
+Use media queries to switch to multi-column layouts on tablet/desktop.
+SECTION 1 — HERO: Your Transformation Starts Here
+Mobile-first layout:
+On mobile, use a single column:
+Text content
+App badges
+Hero image below
+On larger screens, you may shift to a two-column layout with text on the left and image on the right.
+Content (keep wording exactly as is):
+Heading (large, bold, white):
+➡ Transform Your Body with Coach Tarek Al Ghafeer
+Small supporting text under the heading:
+➡ Join Coach Tarek Al Ghafeer’s private fitness community, follow visual workouts, and stay motivated every day - in one place.
+Primary CTA button (full-width on mobile, neon, large):
+➡ Join Coach Tarek Al Ghafeer’s Program (Download App)
+Below CTA, show App Store + Google Play badges (stacked or tight row on mobile).
+Below badges, small branding line:
+Small Fitnet logo
+Text: Powered by Fitnet (subtle, small font, not dominant).
+Hero image:
+On mobile, place below the text/CTAs.
+Use a strong, high-contrast gym/fitness photo with rounded corners and a subtle neon glow.
+SECTION 2 — SOCIAL PROOF: Real Experience. Real Results.
+Separate section directly under the hero.
+Mobile-first:
+Stack elements vertically:
+Counters
+Before/after slider
+Content & UI:
+Counters:
+One card for years of experience
+One card for number of trainees
+Large neon number on top, small description below.
+Before/After Slider Component:
+A swipe/drag slider that shows before vs after transformation images.
+On mobile, ensure it’s easy to drag with a thumb and fits the width of the screen.
+SECTION 3 — BENEFITS: Why Train With Coach Tarek Al Ghafeer?
+Three benefit cards stacked vertically on mobile, with option to show them in a row on larger screens.
+Use exact text (do not change):
+1️⃣ Achieve a stronger, fitter body with visual guidance and progress tracking - never feel lost in the gym again.
+2️⃣ Stay motivated with a coach-led community that makes training exciting, supportive, and never alone.
+3️⃣ Stay driven with rewards and recognition that celebrate your consistency and top performance.
+Design:
+Each benefit in its own rounded card on a slightly lighter dark background.
+Small neon line icon at top of each card.
+Text in white/light grey, full-width on mobile.
+SECTION 4 — HOW IT WORKS: Simple Steps. Real Change.
+Mobile-first layout: steps stacked vertically, centered.
+Title:
+➡ How it Works
+Two step blocks:
+Step 1: Download the app
+Step 2: Search “Coach Tarek Al Ghafeer” and join the challenge
+Below the steps, add this line exactly:
+➡ This is where Coach Tarek Al Ghafeer shares your program, tracks your progress, and motivates you daily.
+UI details:
+Large step numbers inside neon circles (01, 02) above each step text.
+On bigger screens, you may show steps side-by-side, but mobile layout is the default.
+SECTION 5 — FINAL CTA: Start Your Transformation
+A strong closing section optimized for mobile:
+Full-width gradient background using the neon accent fading into the dark base color.
+Content centered and stacked vertically.
+Text (exact wording):
+Heading:
+➡ Are you ready to start your transformation with Coach Tarek Al Ghafeer?
+Subheading:
+➡ Train. Track. Transform - together.
+Main CTA button (full-width on mobile, neon):
+➡ Join Coach Tarek Al Ghafeer’s Program
+Below the button, place App Store and Google Play badges (stacked or tight row).
+Footer note at the very bottom of this section:
+➡ Powered by Fitnet App (with small logo, subtle, smaller font).
+UX / TECH Notes (Mobile-First)
+Design mobile-first: base styles optimized for phones; then use media queries for tablet/desktop enhancements.
+Buttons: full-width on mobile, comfortable tap area, visible hover/focus states.
+Use smooth scrolling between sections.
+Sticky top navigation on mobile with:
+Logo/text “Coach Tarek Al Ghafeer”
+Right-aligned small CTA that scrolls to the hero or final CTA.
+Minimal, performant JS (for before/after slider and smooth scroll).
+Use semantic HTML and clean, maintainable CSS.
