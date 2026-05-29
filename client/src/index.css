@@ -51,6 +51,20 @@
     font-family: "IBM Plex Sans Arabic", Inter, "Segoe UI", Tahoma, Arial, sans-serif !important;
     letter-spacing: 0;
   }
+  button,
+  a[href],
+  [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+    transition-property: transform, filter, box-shadow, background-color, border-color, color, opacity;
+    transition-duration: 160ms;
+    transition-timing-function: ease-out;
+  }
+  button:not(:disabled):active,
+  a[href]:active,
+  [role="button"]:active {
+    transform: translateY(1px) scale(0.98);
+    filter: brightness(0.92);
+  }
 }
 
 /* Custom Utilities for Neon Glows */

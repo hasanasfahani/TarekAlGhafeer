@@ -1,11 +1,4 @@
 import { Users, Trophy } from "lucide-react";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel";
 import { useLanguage } from "@/lib/i18n";
 
 import transformation1 from "@assets/optimized/tarek-transformation-1.webp";
@@ -44,7 +37,7 @@ const CounterCard = ({ number, label, icon: Icon }: { number: string; label: str
   );
 };
 
-const TransformationCarousel = () => {
+const TransformationGallery = () => {
   const { t } = useLanguage();
   const localizedTransformations = transformations.map((item, index) => ({
     ...item,
@@ -52,32 +45,20 @@ const TransformationCarousel = () => {
   }));
 
   return (
-    <div className="w-full max-w-4xl mx-auto mt-12 px-4">
-      <Carousel
-        opts={{
-          align: "start",
-          loop: true,
-        }}
-        className="w-full"
-      >
-        <CarouselContent className="-ml-2 md:-ml-4">
-          {localizedTransformations.map((item, index) => (
-            <CarouselItem key={index} className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/3">
-              <div className="relative aspect-[4/5] rounded-2xl overflow-hidden group border border-white/10 bg-black/50">
-                <img 
-                  src={item.image} 
-                  alt={item.label} 
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
-                  loading="lazy"
-                  decoding="async"
-                />
-              </div>
-            </CarouselItem>
-          ))}
-        </CarouselContent>
-        <CarouselPrevious className="flex -left-2 md:-left-12 border-primary/20 hover:bg-primary hover:text-black h-8 w-8 md:h-10 md:w-10" />
-        <CarouselNext className="flex -right-2 md:-right-12 border-primary/20 hover:bg-primary hover:text-black h-8 w-8 md:h-10 md:w-10" />
-      </Carousel>
+    <div className="mx-auto mt-12 grid w-full max-w-5xl grid-cols-1 gap-4 px-4 sm:grid-cols-2 lg:grid-cols-3">
+      {localizedTransformations.map((item, index) => (
+        <div key={index} className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-white/10 bg-black/50">
+          <img
+            src={item.image}
+            alt={item.label}
+            className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 hover:scale-105"
+            width={1080}
+            height={1350}
+            loading="lazy"
+            decoding="async"
+          />
+        </div>
+      ))}
     </div>
   );
 };
@@ -99,7 +80,7 @@ export default function SocialProof() {
           <CounterCard number={t.social.traineesNumber} label={t.social.traineesLabel} icon={Users} />
         </div>
 
-        <TransformationCarousel />
+        <TransformationGallery />
       </div>
     </section>
   );

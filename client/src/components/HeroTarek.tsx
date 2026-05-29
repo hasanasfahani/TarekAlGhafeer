@@ -77,20 +77,29 @@ export default function Hero() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
-              className={`flex w-full flex-col gap-4 ${isArabic ? "items-end text-right" : "items-start"}`}
+              className={`flex w-full flex-col gap-4 ${
+                isArabic ? "items-end self-end text-right" : "items-start"
+              }`}
             >
-              <Button 
-                onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
-                className={`h-14 bg-primary px-8 text-lg font-bold text-primary-foreground shadow-[0_0_20px_rgba(0,191,107,0.3)] transition-all hover:scale-105 hover:bg-primary/90 ${
-                  isArabic ? "w-auto min-w-64 self-end md:min-w-72" : "w-full uppercase tracking-wider md:w-auto"
-                }`}
-              >{t.hero.cta}</Button>
-              
-              <div dir={isArabic ? "rtl" : "ltr"} className={`-mt-1 inline-flex items-center gap-1.5 whitespace-nowrap opacity-85 ${isArabic ? "ml-auto self-end text-right" : ""}`}>
+              <div className={`flex flex-col gap-4 ${isArabic ? "w-full items-end sm:max-w-[580px]" : "items-start"}`}>
+                <Button 
+                  onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
+                  className={`h-14 bg-primary px-8 text-lg font-bold text-primary-foreground shadow-[0_0_20px_rgba(0,191,107,0.3)] transition-all hover:scale-105 hover:bg-primary/90 ${
+                    isArabic ? "w-full self-end" : "w-full uppercase tracking-wider md:w-auto"
+                  }`}
+                >{t.hero.cta}</Button>
+                
+                <div
+                  dir={isArabic ? "rtl" : "ltr"}
+                  className={`-mt-1 inline-flex items-center gap-1.5 whitespace-nowrap opacity-85 ${
+                    isArabic ? "self-end text-right" : "self-start"
+                  }`}
+                >
                   <Info className="h-3.5 w-3.5 flex-shrink-0 text-primary" />
                   <span className={`text-[11px] font-semibold text-white ${isArabic ? "" : "uppercase tracking-[0.1em]"}`}>
-                  {t.hero.seats}
-                </span>
+                    {t.hero.seats}
+                  </span>
+                </div>
               </div>
             </motion.div>
           </div>
