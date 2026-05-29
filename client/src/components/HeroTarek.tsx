@@ -51,8 +51,8 @@ export default function Hero() {
       </div>
       
       {/* Content */}
-      <div className="container relative z-10 mx-auto px-4 pt-24 pb-12" dir="ltr">
-        <div className={`w-full ${isArabic ? "ml-auto flex max-w-[760px] justify-end text-right" : "max-w-2xl"}`}>
+      <div className={`container relative z-10 mx-auto px-4 pt-24 pb-12 ${isArabic ? "flex justify-end" : ""}`} dir="ltr">
+        <div className={`w-full ${isArabic ? "ml-auto flex max-w-[820px] justify-end text-right" : "max-w-2xl"}`}>
           {/* Text Content */}
           <div className={`flex w-full flex-col gap-6 ${isArabic ? "items-end text-right" : "items-start"}`}>
             <motion.h1 
@@ -62,7 +62,7 @@ export default function Hero() {
               dir={isArabic ? "rtl" : "ltr"}
               className={`text-white ${
                 isArabic
-                  ? "ml-auto w-full max-w-[12ch] text-right text-4xl font-extrabold leading-[1.24] md:text-6xl lg:max-w-[12.5ch] lg:text-7xl"
+                  ? "ml-auto w-full max-w-[760px] text-right text-4xl font-extrabold leading-[1.24] md:text-6xl lg:text-7xl"
                   : "max-w-[11ch] font-heading text-5xl font-bold uppercase leading-[0.9] md:text-7xl lg:text-8xl"
               }`}
             >
@@ -81,8 +81,8 @@ export default function Hero() {
             >
               <Button 
                 onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
-                className={`h-14 w-full bg-primary px-8 text-lg font-bold text-primary-foreground shadow-[0_0_20px_rgba(0,191,107,0.3)] transition-all hover:scale-105 hover:bg-primary/90 md:w-auto ${
-                  isArabic ? "self-end md:min-w-72" : "uppercase tracking-wider"
+                className={`h-14 bg-primary px-8 text-lg font-bold text-primary-foreground shadow-[0_0_20px_rgba(0,191,107,0.3)] transition-all hover:scale-105 hover:bg-primary/90 ${
+                  isArabic ? "w-auto min-w-64 self-end md:min-w-72" : "w-full uppercase tracking-wider md:w-auto"
                 }`}
               >{t.hero.cta}</Button>
               
