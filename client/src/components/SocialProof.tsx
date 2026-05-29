@@ -8,9 +8,9 @@ import {
 } from "@/components/ui/carousel";
 import { useLanguage } from "@/lib/i18n";
 
-import transformation1 from "@assets/bf1_1765019445517.jpg";
-import transformation2 from "@assets/Dylan-Ryan-before_after-1_1765019445517.webp";
-import transformation3 from "@assets/before-after-1_1765019445517.jpg";
+import transformation1 from "@assets/real-experience/tarek-transformation-1.jpg";
+import transformation2 from "@assets/real-experience/tarek-transformation-2.jpg";
+import transformation3 from "@assets/real-experience/tarek-transformation-3.jpg";
 
 const transformations = [
   {
@@ -45,7 +45,7 @@ const CounterCard = ({ number, label, icon: Icon }: { number: string; label: str
 };
 
 const TransformationCarousel = () => {
-  const { t, isArabic } = useLanguage();
+  const { t } = useLanguage();
   const localizedTransformations = transformations.map((item, index) => ({
     ...item,
     ...t.social.transformations[index],
@@ -69,25 +69,6 @@ const TransformationCarousel = () => {
                   alt={item.label} 
                   className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
                 />
-                
-                {/* Overlay Gradient */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
-                
-                {/* Text Content */}
-                <div
-                  className={`absolute bottom-0 left-0 w-full p-4 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300 ${
-                    isArabic ? "text-right" : "text-left"
-                  }`}
-                  dir={isArabic ? "rtl" : "ltr"}
-                >
-                  <div className={`h-1 w-12 bg-primary mb-2 rounded-full ${isArabic ? "ml-auto" : ""}`} />
-                  <h3 className={`font-heading font-bold text-xl text-white ${isArabic ? "" : "uppercase tracking-wide"}`}>
-                    {item.label}
-                  </h3>
-                  <p className={`text-xs text-muted-foreground ${isArabic ? "leading-relaxed" : "uppercase tracking-widest"}`}>
-                    {item.description}
-                  </p>
-                </div>
               </div>
             </CarouselItem>
           ))}
