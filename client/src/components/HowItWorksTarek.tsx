@@ -81,15 +81,23 @@ export default function HowItWorks() {
             delay={0.1}
             icon={WhatsAppLogo}
           >
-            <a
+            <p className="text-center text-lg font-extrabold text-primary">
+              {t.how.whatsappHint}
+            </p>
+            <motion.a
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
               aria-label={t.how.whatsappLabel}
-              className="flex h-20 w-20 items-center justify-center rounded-full bg-[#25D366] text-white shadow-[0_0_30px_rgba(37,211,102,0.38)] transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25D366] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              animate={{ scale: [1, 1.08, 1], y: [0, -3, 0] }}
+              transition={{ duration: 1.4, repeat: Infinity, repeatDelay: 0.8, ease: "easeInOut" }}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.94 }}
+              className="relative flex h-20 w-20 items-center justify-center rounded-full bg-[#25D366] text-white shadow-[0_0_30px_rgba(37,211,102,0.38)] transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25D366] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
-              <WhatsAppLogo className="h-11 w-11" />
-            </a>
+              <span className="pointer-events-none absolute inset-0 rounded-full bg-[#25D366]/40 animate-ping" />
+              <WhatsAppLogo className="relative z-10 h-11 w-11" />
+            </motion.a>
           </StepCard>
 
           <StepCard number="02" title={t.how.download} delay={0.2} icon={Download}>
