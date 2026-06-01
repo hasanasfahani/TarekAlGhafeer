@@ -63,7 +63,7 @@ const BenefitText = ({ text, isArabic }: { text: string; isArabic: boolean }) =>
         return (
           <div
             key={index}
-            className={`flex items-start gap-3 ${isArabic ? "justify-end" : "justify-start"}`}
+            className="flex items-start justify-start gap-3"
           >
             <span className="text-primary" aria-hidden="true">•</span>
             <span>{content}</span>
