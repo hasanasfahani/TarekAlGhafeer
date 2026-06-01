@@ -29,7 +29,7 @@ const translations = {
     how: {
       title: "كيف تسجل؟",
       subtitle: "خطوات بسيطة لتنضم للتحدّي",
-      whatsapp: "اضغط على زر واتساب وابعتلنا: “بدي اشترك”. فريقنا رح يساعدك بإتمام الدفع والانضمام للتحدّي. (سعر الاشتراك $٢٩.٩)",
+      whatsapp: "اضغط على زر واتساب للاشتراك وفريقنا رح يتواصل معك للتثبيت. (سعر الاشتراك $٢٩.٩)",
       whatsappHint: "اضغط هنا👇🏼",
       download: "حمّل تطبيق Fitnet، أدخل كود الدخول، وابدأ التحدّي.",
       qrAlt: "رمز دفع شام كاش",
@@ -88,7 +88,7 @@ const translations = {
     how: {
       title: "How It Works",
       subtitle: "Simple steps to join the challenge",
-      whatsapp: "Click the WhatsApp button and send your join request. Our team will guide you through the payment process and help you join the challenge. (subscription price $29.9)",
+      whatsapp: "Click the WhatsApp button to subscribe and our team will contact you to confirm. (subscription price $29.9)",
       whatsappHint: "Tap here 👇🏼",
       download: "Download the Fitnet app, enter your access code, and start your challenge.",
       qrAlt: "Sham Cash payment QR code",
