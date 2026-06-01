@@ -42,6 +42,38 @@ const IPhoneMockup = ({ screenshot, alt }: { screenshot: string; alt: string }) 
   </div>
 );
 
+const BenefitText = ({ text, isArabic }: { text: string; isArabic: boolean }) => {
+  const lines = text.split("\n").filter(Boolean);
+
+  return (
+    <div
+      dir={isArabic ? "rtl" : "ltr"}
+      className={`space-y-2 text-xl font-medium leading-relaxed text-gray-200 md:text-2xl lg:text-3xl ${
+        isArabic ? "text-right" : "text-left"
+      }`}
+    >
+      {lines.map((line, index) => {
+        const isBullet = line.startsWith("* ");
+        const content = isBullet ? line.slice(2) : line;
+
+        if (!isBullet) {
+          return <p key={index}>{content}</p>;
+        }
+
+        return (
+          <div
+            key={index}
+            className={`flex items-start gap-3 ${isArabic ? "justify-end" : "justify-start"}`}
+          >
+            <span className="text-primary" aria-hidden="true">•</span>
+            <span>{content}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 const BenefitRow = ({ icon: Icon, text, screenshot, reverse = false, index, isArabic }: BenefitRowProps) => (
   <motion.div 
     initial={{ opacity: 0, y: 40 }}
@@ -59,9 +91,7 @@ const BenefitRow = ({ icon: Icon, text, screenshot, reverse = false, index, isAr
       <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-6">
         <Icon className="h-8 w-8 text-primary" />
       </div>
-      <p className="text-xl md:text-2xl lg:text-3xl leading-relaxed text-gray-200 font-medium">
-        {text}
-      </p>
+      <BenefitText text={text} isArabic={isArabic} />
     </div>
     
     {/* iPhone Mockup */}
