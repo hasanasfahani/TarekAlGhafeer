@@ -71,7 +71,12 @@ export default function HowItWorks() {
           <h2 className={`font-heading text-3xl font-bold md:text-5xl ${isArabic ? "" : "uppercase"}`}>
             {t.how.title}
           </h2>
-          <p className="mt-2 text-muted-foreground">{t.how.subtitle}</p>
+          <p
+            dir={isArabic ? "rtl" : "ltr"}
+            className="mx-auto mt-4 max-w-3xl text-balance text-xl font-semibold leading-relaxed text-white/85 md:text-2xl"
+          >
+            {t.how.subtitle}
+          </p>
         </div>
 
         <div className="mx-auto grid max-w-4xl gap-6 lg:grid-cols-2">

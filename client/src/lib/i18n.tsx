@@ -22,13 +22,13 @@ const translations = {
       titleHighlight: "للتحدّي؟",
       items: [
         "رح تكون راضي عن نفسك بعد شهر التزام ورح تحصل على:\n* خطة تدريبية\n* خطة تغذية\nليكون طريقك واضح",
-        "اتحدى باقي المشاركين واربح الملايين 💰",
+        "احرق أكثر… نافس أكثر… واربح 💰\nتنافس مع باقي المشاركين حسب عدد الحريرات التي تحرقها خلال الشهر.",
         "كون جزء من مجتمع داعم بقيادة الكوتش، يخلّيك متحمّس وما تحس إنك عم تتمرن لحالك.",
       ],
     },
     how: {
       title: "كيف تسجل؟",
-      subtitle: "خطوات بسيطة لتنضم للتحدّي",
+      subtitle: "ستحصل على برنامج تدريبي، خطة تغذية، وجوائز بالملايين",
       whatsapp: "اضغط على زر واتساب للاشتراك وفريقنا رح يتواصل معك للتثبيت. (سعر الاشتراك $٢٩.٩)",
       whatsappHint: "اضغط هنا👇🏼",
       download: "حمّل تطبيق Fitnet، أدخل كود الدخول، وابدأ التحدّي.",
@@ -81,13 +81,13 @@ const translations = {
       titleHighlight: "Challenge:",
       items: [
         "You’ll feel proud of yourself after one month of commitment and you’ll get:\n* A training plan\n* A nutrition plan\nso your path is clear",
-        "Challenge the other participants and win millions 💰",
+        "Burn more... compete more... and win 💰\nCompete with the other participants based on the calories you burn during the month.",
         "Be part of a supportive, coach-led community that keeps you motivated and never alone.",
       ],
     },
     how: {
       title: "How It Works",
-      subtitle: "Simple steps to join the challenge",
+      subtitle: "You’ll get a training program, a nutrition plan, and prizes worth millions",
       whatsapp: "Click the WhatsApp button to subscribe and our team will contact you to confirm. (subscription price $29.9)",
       whatsappHint: "Tap here 👇🏼",
       download: "Download the Fitnet app, enter your access code, and start your challenge.",
