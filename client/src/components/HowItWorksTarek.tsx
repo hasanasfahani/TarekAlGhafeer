@@ -86,6 +86,13 @@ export default function HowItWorks() {
             delay={0.1}
             icon={WhatsAppLogo}
           >
+            <div
+              dir={isArabic ? "rtl" : "ltr"}
+              className="inline-flex items-center gap-2 rounded-full border border-primary/35 bg-primary/10 px-4 py-2 text-sm font-extrabold text-primary shadow-[0_0_24px_rgba(0,191,107,0.12)]"
+            >
+              <span className="h-2 w-2 rounded-full bg-primary shadow-[0_0_12px_rgba(0,191,107,0.9)]" />
+              <span>{t.how.seatsLeft}</span>
+            </div>
             <p className="text-center text-lg font-extrabold text-primary">
               {t.how.whatsappHint}
             </p>
