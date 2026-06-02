@@ -29,7 +29,7 @@ const translations = {
     how: {
       title: "كيف تسجل؟",
       subtitle: "ستحصل على برنامج تدريبي، خطة تغذية، وجوائز بالملايين",
-      whatsapp: "اضغط على زر واتساب للاشتراك وفريقنا رح يتواصل معك للتثبيت.",
+      whatsapp: "اضغط على زر واتساب لإتمام عملية الدفع ($٢٩.٩) والتثبيت مع فريقنا.",
       seatsLeft: "١٠ مقاعد متبقية",
       whatsappHint: "اضغط هنا👇🏼",
       download: "حمّل تطبيق Fitnet، أدخل كود الدخول، وابدأ التحدّي.",
@@ -89,7 +89,7 @@ const translations = {
     how: {
       title: "How It Works",
       subtitle: "You’ll get a training program, a nutrition plan, and prizes worth millions",
-      whatsapp: "Click the WhatsApp button to subscribe and our team will contact you to confirm.",
+      whatsapp: "Click the WhatsApp button to complete payment ($29.9) and confirm with our team.",
       seatsLeft: "10 seats left",
       whatsappHint: "Tap here 👇🏼",
       download: "Download the Fitnet app, enter your access code, and start your challenge.",
