@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { Pool } from "pg";
+import type { Pool as PgPool } from "pg";
 
 const defaultCoachSlug = "coach-tarek";
 const defaultChallengeSlug = "coach-tarek-challenge";
@@ -10,15 +10,16 @@ const defaultChallengeEntryCode = "336699";
 
 declare global {
   // eslint-disable-next-line no-var
-  var coachPortalApiPool: Pool | undefined;
+  var coachPortalApiPool: PgPool | undefined;
 }
 
-function getPool() {
+async function getPool() {
   if (!process.env.DATABASE_URL) {
     throw new Error("DATABASE_URL is not configured.");
   }
 
   if (!globalThis.coachPortalApiPool) {
+    const { Pool } = await import("pg");
     globalThis.coachPortalApiPool = new Pool({
       connectionString: process.env.DATABASE_URL,
       ssl:
@@ -49,7 +50,7 @@ function normalizeContact(input: any) {
 }
 
 async function ensureDefaultChallenge() {
-  const pool = getPool();
+  const pool = await getPool();
 
   let coachResult = await pool.query(
     "select * from coaches where slug = $1 limit 1",
@@ -96,7 +97,7 @@ async function ensureDefaultChallenge() {
 
 export async function createPendingRegistration(contactInput: unknown) {
   const contact = normalizeContact(contactInput);
-  const pool = getPool();
+  const pool = await getPool();
   const { coach, challenge } = await ensureDefaultChallenge();
   const operationId = randomUUID();
 
@@ -137,7 +138,7 @@ export async function attachPaymentIntentToRegistration({
   paymentIntentId: string;
   rawPayment?: unknown;
 }) {
-  const pool = getPool();
+  const pool = await getPool();
   const result = await pool.query(
     `update registrations
      set payment_intent_id = $2, raw_payment = $3, updated_at = now()
@@ -162,7 +163,7 @@ export async function markRegistrationPaid({
     throw new Error("A registration id or payment intent id is required.");
   }
 
-  const pool = getPool();
+  const pool = await getPool();
   const result = registrationId
     ? await pool.query(
         `update registrations
@@ -202,7 +203,7 @@ export async function updateRegistrationStatus({
     throw new Error("A payment intent id is required.");
   }
 
-  const pool = getPool();
+  const pool = await getPool();
   const result = await pool.query(
     `update registrations
      set status = $2, raw_payment = coalesce($3, raw_payment), updated_at = now()
@@ -215,7 +216,7 @@ export async function updateRegistrationStatus({
 }
 
 export async function listRegistrations(status?: string) {
-  const pool = getPool();
+  const pool = await getPool();
   const params: string[] = [];
   const where = status ? "where r.status = $1" : "";
   if (status) params.push(status);
@@ -276,7 +277,7 @@ export async function listRegistrations(status?: string) {
 }
 
 export async function getAdminSummary() {
-  const pool = getPool();
+  const pool = await getPool();
   const totals = await pool.query(
     `select count(*)::int as total_registrations,
             coalesce(sum(amount), 0)::int as total_revenue
