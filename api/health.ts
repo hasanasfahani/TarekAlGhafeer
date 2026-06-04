@@ -17,7 +17,7 @@ export default async function handler(req: VercelLikeRequest, res: VercelLikeRes
 
   return res.status(200).json({
     ok: true,
-    version: "2026-06-05-db-dynamic-import",
+    version: "2026-06-05-registration-debug",
     hasAdminPassword: Boolean(process.env.ADMIN_PASSWORD),
     hasDatabaseUrl: Boolean(process.env.DATABASE_URL),
     hasZiinaApiKey: Boolean(process.env.ZIINA_API_KEY),
