@@ -5,11 +5,16 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/HomeTarek";
+import RegistrationForm from "@/pages/RegistrationForm";
 import { LanguageProvider } from "@/lib/i18n";
 
 function Router() {
   return (
     <Switch>
+      <Route path="/registration-form/success" component={RegistrationForm} />
+      <Route path="/registration-form/failed" component={RegistrationForm} />
+      <Route path="/registration-form/cancelled" component={RegistrationForm} />
+      <Route path="/registration-form" component={RegistrationForm} />
       <Route path="/" component={Home} />
       <Route component={NotFound} />
     </Switch>
