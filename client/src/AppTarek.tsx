@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/HomeTarek";
 import RegistrationForm from "@/pages/RegistrationForm";
+import AdminPortal from "@/pages/AdminPortal";
 import { LanguageProvider } from "@/lib/i18n";
 
 function Router() {
@@ -15,6 +16,7 @@ function Router() {
       <Route path="/registration-form/failed" component={RegistrationForm} />
       <Route path="/registration-form/cancelled" component={RegistrationForm} />
       <Route path="/registration-form" component={RegistrationForm} />
+      <Route path="/admin" component={AdminPortal} />
       <Route path="/" component={Home} />
       <Route component={NotFound} />
     </Switch>

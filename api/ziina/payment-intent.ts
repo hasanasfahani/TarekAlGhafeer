@@ -1,8 +1,11 @@
 import { randomUUID } from "crypto";
+import {
+  attachPaymentIntentToRegistration,
+  canUseRegistrationsDatabase,
+  createPendingRegistration,
+} from "../../server/registrationStore";
 
 const ziinaApiBaseUrl = "https://api-v2.ziina.com/api";
-const challengeAmount = 14900;
-const challengeCurrency = "AED";
 const challengeMessage = "Coach Tarek Challenge Registration";
 
 function shouldCreateTestPayment() {
@@ -15,6 +18,7 @@ function shouldCreateTestPayment() {
 type VercelLikeRequest = {
   method?: string;
   headers: Record<string, string | string[] | undefined>;
+  body?: any;
 };
 
 type VercelLikeResponse = {
@@ -45,12 +49,24 @@ export default async function handler(req: VercelLikeRequest, res: VercelLikeRes
     });
   }
 
-  const origin = getOrigin(req);
-  const successUrl = `${origin}/registration-form/success`;
-  const cancelUrl = `${origin}/registration-form/cancelled`;
-  const failureUrl = `${origin}/registration-form/failed`;
-
   try {
+    if (!canUseRegistrationsDatabase()) {
+      return res.status(500).json({
+        message: "Supabase database is not configured.",
+      });
+    }
+
+    const registrationBundle = await createPendingRegistration({
+      ...(req.body?.contact ?? req.body ?? {}),
+      coachSlug: req.body?.coachSlug || "coach-tarek",
+      challengeSlug: req.body?.challengeSlug || "coach-tarek-challenge",
+    });
+
+    const origin = getOrigin(req);
+    const successUrl = `${origin}/registration-form/success?registration_id=${registrationBundle.registration.id}&payment_intent_id={PAYMENT_INTENT_ID}`;
+    const cancelUrl = `${origin}/registration-form/cancelled?registration_id=${registrationBundle.registration.id}&payment_intent_id={PAYMENT_INTENT_ID}`;
+    const failureUrl = `${origin}/registration-form/failed?registration_id=${registrationBundle.registration.id}&payment_intent_id={PAYMENT_INTENT_ID}`;
+
     const ziinaResponse = await fetch(`${ziinaApiBaseUrl}/payment_intent`, {
       method: "POST",
       headers: {
@@ -58,15 +74,15 @@ export default async function handler(req: VercelLikeRequest, res: VercelLikeRes
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        amount: challengeAmount,
-        currency_code: challengeCurrency,
+        amount: registrationBundle.registration.amount,
+        currency_code: registrationBundle.registration.currency,
         message: challengeMessage,
         success_url: successUrl,
         cancel_url: cancelUrl,
         failure_url: failureUrl,
         allow_tips: false,
         test: shouldCreateTestPayment(),
-        operation_id: randomUUID(),
+        operation_id: registrationBundle.registration.operationId || randomUUID(),
       }),
     });
 
@@ -79,8 +95,15 @@ export default async function handler(req: VercelLikeRequest, res: VercelLikeRes
       });
     }
 
+    await attachPaymentIntentToRegistration({
+      registrationId: registrationBundle.registration.id,
+      paymentIntentId: data.id,
+      rawPayment: data,
+    });
+
     return res.status(200).json({
       id: data.id,
+      registrationId: registrationBundle.registration.id,
       status: data.status,
       amount: data.amount,
       currencyCode: data.currency_code,

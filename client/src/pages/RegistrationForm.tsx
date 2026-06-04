@@ -18,6 +18,15 @@ import {
 
 import AppStoreBadges from "@/components/AppStoreBadges";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import enterCodeScreenshot from "@assets/registration-success/enter-code.webp";
 import registerTraineeScreenshot from "@assets/registration-success/register-trainee.webp";
 import selectChallengeScreenshot from "@assets/registration-success/select-challenge.webp";
@@ -352,7 +361,38 @@ function StepTenValue() {
 
 function PaymentSuccess() {
   const [copied, setCopied] = useState(false);
+  const [paymentSyncStatus, setPaymentSyncStatus] = useState<
+    "idle" | "syncing" | "synced" | "failed"
+  >("idle");
   const challengeCode = "336699";
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const registrationId = params.get("registration_id");
+    const paymentIntentId = params.get("payment_intent_id");
+
+    if (!registrationId && !paymentIntentId) return;
+
+    let cancelled = false;
+    setPaymentSyncStatus("syncing");
+
+    fetch("/api/registrations/complete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ registrationId, paymentIntentId }),
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error("Could not sync payment.");
+        if (!cancelled) setPaymentSyncStatus("synced");
+      })
+      .catch(() => {
+        if (!cancelled) setPaymentSyncStatus("failed");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const copyCode = async () => {
     try {
@@ -432,6 +472,12 @@ function PaymentSuccess() {
           <p className="mt-5 max-w-3xl text-xl font-semibold leading-relaxed text-white/75">
             مكانك صار محجوز… الحين باقي بس تدخل التطبيق وتجهّز للتحدي.
           </p>
+          {paymentSyncStatus === "failed" ? (
+            <p className="mt-4 rounded-xl border border-yellow-400/25 bg-yellow-400/10 px-4 py-3 text-sm font-bold leading-relaxed text-yellow-100">
+              تم الدفع بنجاح، لكن احتجنا لحظة أطول لتحديث لوحة الإدارة. لو استمر
+              التنبيه، راح نثبّت الدفع من مزود الدفع.
+            </p>
+          ) : null}
         </section>
 
         <section className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -510,6 +556,14 @@ function RegistrationFlow({ initialPaymentStatus }: { initialPaymentStatus: stri
   const [stepIndex, setStepIndex] = useState(() => getSavedStepIndex(initialPaymentStatus));
   const [answers, setAnswers] = useState<Record<number, string[]>>({});
   const [paymentLoading, setPaymentLoading] = useState(false);
+  const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
+  const [contactConfirmed, setContactConfirmed] = useState(false);
+  const [contactError, setContactError] = useState<string | null>(null);
+  const [contactInfo, setContactInfo] = useState({
+    name: "",
+    email: "",
+    whatsapp: "",
+  });
   const [paymentError, setPaymentError] = useState<string | null>(() =>
     initialPaymentStatus === "failed"
       ? "ما تمت عملية الدفع. جرّب مرة ثانية وثبّت مكانك قبل اكتمال العدد."
@@ -519,6 +573,11 @@ function RegistrationFlow({ initialPaymentStatus }: { initialPaymentStatus: stri
   const progress = ((stepIndex + 1) / steps.length) * 100;
   const selected = answers[stepIndex] ?? [];
   const canContinue = !step.options || selected.length > 0;
+  const contactFormIsValid =
+    contactInfo.name.trim().length >= 2 &&
+    /\S+@\S+\.\S+/.test(contactInfo.email.trim()) &&
+    contactInfo.whatsapp.trim().length >= 7 &&
+    contactConfirmed;
   const StepIcon = step.icon;
 
   useEffect(() => {
@@ -531,32 +590,66 @@ function RegistrationFlow({ initialPaymentStatus }: { initialPaymentStatus: stri
     }
   }, [initialPaymentStatus]);
 
+  const startPayment = async () => {
+    if (!contactFormIsValid) {
+      setContactError("عبّي معلوماتك وتأكد إنها صحيحة قبل المتابعة للدفع.");
+      return;
+    }
+
+    setPaymentLoading(true);
+    setPaymentError(null);
+    setContactError(null);
+    setIsContactDialogOpen(false);
+
+    try {
+      window.localStorage.setItem(
+        "registration-contact-info",
+        JSON.stringify({
+          name: contactInfo.name.trim(),
+          email: contactInfo.email.trim(),
+          whatsapp: contactInfo.whatsapp.trim(),
+        }),
+      );
+
+      const response = await fetch("/api/ziina/payment-intent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contact: {
+            name: contactInfo.name.trim(),
+            email: contactInfo.email.trim(),
+            whatsapp: contactInfo.whatsapp.trim(),
+          },
+          coachSlug: "coach-tarek",
+          challengeSlug: "coach-tarek-challenge",
+        }),
+      });
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok || !data?.redirectUrl) {
+        throw new Error(data?.error || data?.message || "تعذر إنشاء رابط الدفع.");
+      }
+
+      window.localStorage.setItem("registration-form-step", String(paymentStepIndex));
+      if (data.registrationId) {
+        window.localStorage.setItem("registration-id", data.registrationId);
+      }
+      window.location.href = data.redirectUrl;
+    } catch (error) {
+      setPaymentError(
+        error instanceof Error ? error.message : "تعذر إنشاء رابط الدفع.",
+      );
+      setPaymentLoading(false);
+    }
+  };
+
   const goNext = async () => {
     if (!canContinue) return;
     if (stepIndex === steps.length - 1) {
-      setPaymentLoading(true);
+      setContactError(null);
       setPaymentError(null);
-
-      try {
-        const response = await fetch("/api/ziina/payment-intent", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-        });
-
-        const data = await response.json().catch(() => null);
-
-        if (!response.ok || !data?.redirectUrl) {
-          throw new Error(data?.error || data?.message || "تعذر إنشاء رابط الدفع.");
-        }
-
-        window.localStorage.setItem("registration-form-step", String(paymentStepIndex));
-        window.location.href = data.redirectUrl;
-      } catch (error) {
-        setPaymentError(
-          error instanceof Error ? error.message : "تعذر إنشاء رابط الدفع.",
-        );
-        setPaymentLoading(false);
-      }
+      setIsContactDialogOpen(true);
       return;
     }
     setStepIndex((current) => Math.min(current + 1, steps.length - 1));
@@ -758,6 +851,113 @@ function RegistrationFlow({ initialPaymentStatus }: { initialPaymentStatus: stri
           </section>
 
         </div>
+        <Dialog open={isContactDialogOpen} onOpenChange={setIsContactDialogOpen}>
+          <DialogContent
+            dir="rtl"
+            className="max-h-[92vh] w-[calc(100vw-1.5rem)] overflow-y-auto rounded-3xl border-white/10 bg-[#0b0f0d] p-5 text-white shadow-[0_26px_90px_rgba(0,0,0,0.55)] sm:max-w-md sm:p-6"
+          >
+            <DialogHeader className="space-y-3 text-right">
+              <DialogTitle className="text-2xl font-extrabold text-white">
+                خلّينا نجهّز كود دخولك
+              </DialogTitle>
+              <DialogDescription className="text-base font-semibold leading-relaxed text-white/65">
+                أضف اسمك، إيميلك، ورقم الواتساب حتى نقدر نرسل لك كود دخول
+                التحدي وتفاصيل البداية بعد إتمام الدفع.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="mt-5 space-y-4">
+              <label className="block space-y-2">
+                <span className="text-sm font-extrabold text-white/80">الاسم الكامل</span>
+                <Input
+                  value={contactInfo.name}
+                  onChange={(event) =>
+                    setContactInfo((current) => ({
+                      ...current,
+                      name: event.target.value,
+                    }))
+                  }
+                  placeholder="مثال: طارق الغفير"
+                  className="h-14 rounded-2xl border-white/10 bg-white/[0.04] text-base font-bold text-white placeholder:text-white/30 focus-visible:ring-primary"
+                />
+              </label>
+
+              <label className="block space-y-2">
+                <span className="text-sm font-extrabold text-white/80">الإيميل</span>
+                <Input
+                  type="email"
+                  value={contactInfo.email}
+                  onChange={(event) =>
+                    setContactInfo((current) => ({
+                      ...current,
+                      email: event.target.value,
+                    }))
+                  }
+                  placeholder="name@example.com"
+                  dir="ltr"
+                  className="h-14 rounded-2xl border-white/10 bg-white/[0.04] text-left text-base font-bold text-white placeholder:text-white/30 focus-visible:ring-primary"
+                />
+              </label>
+
+              <label className="block space-y-2">
+                <span className="text-sm font-extrabold text-white/80">
+                  رقم واتساب
+                </span>
+                <Input
+                  type="tel"
+                  value={contactInfo.whatsapp}
+                  onChange={(event) =>
+                    setContactInfo((current) => ({
+                      ...current,
+                      whatsapp: event.target.value,
+                    }))
+                  }
+                  placeholder="+971 50 000 0000"
+                  dir="ltr"
+                  className="h-14 rounded-2xl border-white/10 bg-white/[0.04] text-left text-base font-bold text-white placeholder:text-white/30 focus-visible:ring-primary"
+                />
+              </label>
+
+              <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-primary/20 bg-primary/10 p-4">
+                <Checkbox
+                  checked={contactConfirmed}
+                  onCheckedChange={(checked) => setContactConfirmed(checked === true)}
+                  className="mt-1 border-primary data-[state=checked]:bg-primary data-[state=checked]:text-black"
+                />
+                <span className="text-sm font-bold leading-relaxed text-white/80">
+                  أؤكد أن الاسم والإيميل ورقم الواتساب صحيحين، حتى يوصلني كود
+                  دخول التحدي بدون تأخير.
+                </span>
+              </label>
+
+              {contactError ? (
+                <p className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-100">
+                  {contactError}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="mt-6 grid gap-3">
+              <Button
+                type="button"
+                onClick={startPayment}
+                disabled={paymentLoading || !contactFormIsValid}
+                className="h-14 rounded-2xl bg-primary text-lg font-extrabold text-primary-foreground shadow-[0_0_28px_rgba(0,191,107,0.26)] hover:bg-primary/90 disabled:opacity-45"
+              >
+                {paymentLoading ? "جاري تجهيز الدفع..." : "متابعة للدفع"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsContactDialogOpen(false)}
+                disabled={paymentLoading}
+                className="h-12 rounded-2xl border-white/10 bg-white/[0.03] text-white hover:bg-white/10 hover:text-white"
+              >
+                رجوع
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </main>
   );
