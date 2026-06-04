@@ -1,5 +1,4 @@
 import { randomUUID } from "crypto";
-import type { Pool as PgPool } from "pg";
 
 const defaultCoachSlug = "coach-tarek";
 const defaultChallengeSlug = "coach-tarek-challenge";
@@ -10,7 +9,7 @@ const defaultChallengeEntryCode = "336699";
 
 declare global {
   // eslint-disable-next-line no-var
-  var coachPortalApiPool: PgPool | undefined;
+  var coachPortalApiPool: any;
 }
 
 async function getPool() {
@@ -249,7 +248,7 @@ export async function listRegistrations(status?: string) {
     params,
   );
 
-  return result.rows.map((row) => ({
+  return result.rows.map((row: Record<string, any>) => ({
     id: row.id,
     status: row.status,
     amount: row.amount,
@@ -306,7 +305,7 @@ export async function getAdminSummary() {
     totalPaidRegistrations: totals.rows[0]?.total_registrations ?? 0,
     totalRevenue: totals.rows[0]?.total_revenue ?? 0,
     totalPendingRegistrations: pending.rows[0]?.total_pending ?? 0,
-    byChallenge: byChallenge.rows.map((row) => ({
+    byChallenge: byChallenge.rows.map((row: Record<string, any>) => ({
       coachName: row.coach_name,
       challengeName: row.challenge_name,
       paidRegistrations: row.paid_registrations,
