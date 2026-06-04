@@ -1,11 +1,12 @@
 import {
   adminPasswordHeader,
+  getHeader,
   isAdminPasswordValid,
-} from "../../server/adminAuth";
+} from "../_lib/admin";
 import {
   canUseRegistrationsDatabase,
   getAdminSummary,
-} from "../../server/registrationStore";
+} from "../_lib/registrations";
 
 type VercelLikeRequest = {
   method?: string;
@@ -19,18 +20,13 @@ type VercelLikeResponse = {
   };
 };
 
-function getHeader(req: VercelLikeRequest, name: string) {
-  const value = req.headers[name] || req.headers[name.toLowerCase()];
-  return Array.isArray(value) ? value[0] : value;
-}
-
 export default async function handler(req: VercelLikeRequest, res: VercelLikeResponse) {
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
     return res.status(405).json({ message: "Method not allowed." });
   }
 
-  if (!isAdminPasswordValid(getHeader(req, adminPasswordHeader))) {
+  if (!isAdminPasswordValid(getHeader(req.headers, adminPasswordHeader))) {
     return res.status(401).json({ message: "Unauthorized." });
   }
 

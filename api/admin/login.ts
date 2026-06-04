@@ -1,7 +1,4 @@
-import {
-  getMissingAdminPasswordMessage,
-  isAdminPasswordValid,
-} from "../../server/adminAuth";
+import { isAdminPasswordValid } from "../_lib/admin";
 
 type VercelLikeRequest = {
   method?: string;
@@ -22,7 +19,7 @@ export default async function handler(req: VercelLikeRequest, res: VercelLikeRes
   }
 
   if (!process.env.ADMIN_PASSWORD) {
-    return res.status(500).json({ message: getMissingAdminPasswordMessage() });
+    return res.status(500).json({ message: "ADMIN_PASSWORD is not configured." });
   }
 
   if (!isAdminPasswordValid(req.body?.password)) {

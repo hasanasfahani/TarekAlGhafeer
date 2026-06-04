@@ -2,7 +2,7 @@ import { z } from "zod";
 import {
   canUseRegistrationsDatabase,
   markRegistrationPaid,
-} from "../../server/registrationStore";
+} from "../_lib/registrations";
 
 type VercelLikeRequest = {
   method?: string;
