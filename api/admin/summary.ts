@@ -21,21 +21,28 @@ type VercelLikeResponse = {
 };
 
 export default async function handler(req: VercelLikeRequest, res: VercelLikeResponse) {
-  if (req.method !== "GET") {
-    res.setHeader("Allow", "GET");
-    return res.status(405).json({ message: "Method not allowed." });
-  }
+  try {
+    if (req.method !== "GET") {
+      res.setHeader("Allow", "GET");
+      return res.status(405).json({ message: "Method not allowed." });
+    }
 
-  if (!isAdminPasswordValid(getHeader(req.headers, adminPasswordHeader))) {
-    return res.status(401).json({ message: "Unauthorized." });
-  }
+    if (!isAdminPasswordValid(getHeader(req.headers, adminPasswordHeader))) {
+      return res.status(401).json({ message: "Unauthorized." });
+    }
 
-  if (!canUseRegistrationsDatabase()) {
+    if (!canUseRegistrationsDatabase()) {
+      return res.status(500).json({
+        message: "Supabase database is not configured.",
+      });
+    }
+
+    const summary = await getAdminSummary();
+    return res.status(200).json({ summary });
+  } catch (error) {
     return res.status(500).json({
-      message: "Supabase database is not configured.",
+      message: "Could not load admin summary.",
+      error: error instanceof Error ? error.message : "Unknown error",
     });
   }
-
-  const summary = await getAdminSummary();
-  return res.status(200).json({ summary });
 }

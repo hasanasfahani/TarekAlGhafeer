@@ -36,20 +36,20 @@ function getOrigin(req: VercelLikeRequest) {
 }
 
 export default async function handler(req: VercelLikeRequest, res: VercelLikeResponse) {
-  if (req.method !== "POST") {
-    res.setHeader("Allow", "POST");
-    return res.status(405).json({ message: "Method not allowed." });
-  }
-
-  const token = process.env.ZIINA_API_KEY;
-
-  if (!token) {
-    return res.status(500).json({
-      message: "Ziina API key is not configured.",
-    });
-  }
-
   try {
+    if (req.method !== "POST") {
+      res.setHeader("Allow", "POST");
+      return res.status(405).json({ message: "Method not allowed." });
+    }
+
+    const token = process.env.ZIINA_API_KEY;
+
+    if (!token) {
+      return res.status(500).json({
+        message: "Ziina API key is not configured.",
+      });
+    }
+
     if (!canUseRegistrationsDatabase()) {
       return res.status(500).json({
         message: "Supabase database is not configured.",

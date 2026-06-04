@@ -22,23 +22,30 @@ type VercelLikeResponse = {
 };
 
 export default async function handler(req: VercelLikeRequest, res: VercelLikeResponse) {
-  if (req.method !== "GET") {
-    res.setHeader("Allow", "GET");
-    return res.status(405).json({ message: "Method not allowed." });
-  }
+  try {
+    if (req.method !== "GET") {
+      res.setHeader("Allow", "GET");
+      return res.status(405).json({ message: "Method not allowed." });
+    }
 
-  if (!isAdminPasswordValid(getHeader(req.headers, adminPasswordHeader))) {
-    return res.status(401).json({ message: "Unauthorized." });
-  }
+    if (!isAdminPasswordValid(getHeader(req.headers, adminPasswordHeader))) {
+      return res.status(401).json({ message: "Unauthorized." });
+    }
 
-  if (!canUseRegistrationsDatabase()) {
+    if (!canUseRegistrationsDatabase()) {
+      return res.status(500).json({
+        message: "Supabase database is not configured.",
+      });
+    }
+
+    const statusQuery = req.query?.status;
+    const status = Array.isArray(statusQuery) ? statusQuery[0] : statusQuery;
+    const registrations = await listRegistrations(status && status !== "all" ? status : undefined);
+    return res.status(200).json({ registrations });
+  } catch (error) {
     return res.status(500).json({
-      message: "Supabase database is not configured.",
+      message: "Could not load registrations.",
+      error: error instanceof Error ? error.message : "Unknown error",
     });
   }
-
-  const statusQuery = req.query?.status;
-  const status = Array.isArray(statusQuery) ? statusQuery[0] : statusQuery;
-  const registrations = await listRegistrations(status && status !== "all" ? status : undefined);
-  return res.status(200).json({ registrations });
 }

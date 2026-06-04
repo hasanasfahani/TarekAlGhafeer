@@ -49,33 +49,40 @@ function isPaidZiinaStatus(status: string | null) {
 }
 
 export default async function handler(req: VercelLikeRequest, res: VercelLikeResponse) {
-  if (req.method !== "POST") {
-    res.setHeader("Allow", "POST");
-    return res.status(405).json({ message: "Method not allowed." });
-  }
+  try {
+    if (req.method !== "POST") {
+      res.setHeader("Allow", "POST");
+      return res.status(405).json({ message: "Method not allowed." });
+    }
 
-  if (!canUseRegistrationsDatabase()) {
+    if (!canUseRegistrationsDatabase()) {
+      return res.status(500).json({
+        message: "Supabase database is not configured.",
+      });
+    }
+
+    const payment = getZiinaStatus(req.body);
+
+    if (!payment?.id) {
+      return res.status(202).json({ message: "Webhook received." });
+    }
+
+    const registration = isPaidZiinaStatus(payment.status)
+      ? await markRegistrationPaid({
+          paymentIntentId: payment.id,
+          rawPayment: req.body,
+        })
+      : await updateRegistrationStatus({
+          paymentIntentId: payment.id,
+          status: payment.status || "payment_updated",
+          rawPayment: req.body,
+        });
+
+    return res.status(200).json({ registration });
+  } catch (error) {
     return res.status(500).json({
-      message: "Supabase database is not configured.",
+      message: "Could not process Ziina webhook.",
+      error: error instanceof Error ? error.message : "Unknown error",
     });
   }
-
-  const payment = getZiinaStatus(req.body);
-
-  if (!payment?.id) {
-    return res.status(202).json({ message: "Webhook received." });
-  }
-
-  const registration = isPaidZiinaStatus(payment.status)
-    ? await markRegistrationPaid({
-        paymentIntentId: payment.id,
-        rawPayment: req.body,
-      })
-    : await updateRegistrationStatus({
-        paymentIntentId: payment.id,
-        status: payment.status || "payment_updated",
-        rawPayment: req.body,
-      });
-
-  return res.status(200).json({ registration });
 }
