@@ -1,5 +1,3 @@
-import { isAdminPasswordValid } from "../_lib/admin";
-
 type VercelLikeRequest = {
   method?: string;
   body?: any;
@@ -11,6 +9,16 @@ type VercelLikeResponse = {
     json(body: unknown): void;
   };
 };
+
+function isAdminPasswordValid(password: unknown) {
+  const expectedPassword = process.env.ADMIN_PASSWORD || "";
+  return (
+    typeof password === "string" &&
+    password.length > 0 &&
+    expectedPassword.length > 0 &&
+    password === expectedPassword
+  );
+}
 
 export default async function handler(req: VercelLikeRequest, res: VercelLikeResponse) {
   if (req.method !== "POST") {
