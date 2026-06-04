@@ -3,7 +3,7 @@ import {
   attachPaymentIntentToRegistration,
   canUseRegistrationsDatabase,
   createPendingRegistration,
-} from "../_lib/registrations";
+} from "../_lib/registrations.js";
 
 const ziinaApiBaseUrl = "https://api-v2.ziina.com/api";
 const challengeMessage = "Coach Tarek Challenge Registration";

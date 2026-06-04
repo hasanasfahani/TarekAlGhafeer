@@ -2,7 +2,7 @@ import {
   canUseRegistrationsDatabase,
   markRegistrationPaid,
   updateRegistrationStatus,
-} from "../_lib/registrations";
+} from "../_lib/registrations.js";
 
 type VercelLikeRequest = {
   method?: string;

@@ -16,7 +16,7 @@ export default async function handler(req: VercelLikeRequest, res: VercelLikeRes
   }
 
   try {
-    const registrations = await import("../_lib/registrations");
+    const registrations = await import("../_lib/registrations.js");
     return res.status(200).json({
       ok: true,
       hasDatabaseUrl: Boolean(process.env.DATABASE_URL),

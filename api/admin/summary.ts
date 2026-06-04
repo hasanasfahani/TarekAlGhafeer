@@ -2,11 +2,11 @@ import {
   adminPasswordHeader,
   getHeader,
   isAdminPasswordValid,
-} from "../_lib/admin";
+} from "../_lib/admin.js";
 import {
   canUseRegistrationsDatabase,
   getAdminSummary,
-} from "../_lib/registrations";
+} from "../_lib/registrations.js";
 
 type VercelLikeRequest = {
   method?: string;
