@@ -1,6 +1,13 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist/public",
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/registration-form",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/(.*)",
