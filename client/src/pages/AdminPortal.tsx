@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  Check,
+  Copy,
   Download,
   Lock,
   RefreshCw,
@@ -80,6 +82,8 @@ function downloadCsv(rows: RegistrationRecord[]) {
     "Currency",
     "Paid At",
     "Payment Intent",
+    "Registration ID",
+    "Operation ID",
   ];
 
   const csvRows = rows.map((row) => [
@@ -93,6 +97,8 @@ function downloadCsv(rows: RegistrationRecord[]) {
     row.currency,
     row.paidAt || "",
     row.paymentIntentId || "",
+    row.id,
+    row.operationId,
   ]);
 
   const csv = [headers, ...csvRows]
@@ -122,6 +128,7 @@ export default function AdminPortal() {
   const [summary, setSummary] = useState<AdminSummary | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const filteredRegistrations = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -135,6 +142,9 @@ export default function AdminPortal() {
         registration.coach.name,
         registration.challenge.name,
         registration.status,
+        registration.id,
+        registration.paymentIntentId || "",
+        registration.operationId,
       ]
         .join(" ")
         .toLowerCase()
@@ -222,6 +232,13 @@ export default function AdminPortal() {
     setIsAuthenticated(false);
     setSummary(null);
     setRegistrations([]);
+  };
+
+  const copyValue = async (label: string, value: string | null) => {
+    if (!value) return;
+    await navigator.clipboard.writeText(value);
+    setCopiedId(`${label}:${value}`);
+    window.setTimeout(() => setCopiedId(null), 1600);
   };
 
   if (!isAuthenticated) {
@@ -369,7 +386,7 @@ export default function AdminPortal() {
           ) : null}
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] text-left text-sm">
+            <table className="w-full min-w-[1180px] text-left text-sm">
               <thead className="bg-white/[0.03] text-xs uppercase tracking-wide text-white/45">
                 <tr>
                   <th className="px-4 py-3">Member</th>
@@ -379,6 +396,7 @@ export default function AdminPortal() {
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Amount</th>
                   <th className="px-4 py-3">Paid At</th>
+                  <th className="px-4 py-3">IDs</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/10">
@@ -419,6 +437,22 @@ export default function AdminPortal() {
                     <td className="px-4 py-4 text-white/60">
                       {formatDate(registration.paidAt)}
                     </td>
+                    <td className="px-4 py-4">
+                      <div className="space-y-2">
+                        <IdCopyRow
+                          label="REG"
+                          value={registration.id}
+                          copied={copiedId === `REG:${registration.id}`}
+                          onCopy={() => copyValue("REG", registration.id)}
+                        />
+                        <IdCopyRow
+                          label="PAY"
+                          value={registration.paymentIntentId}
+                          copied={copiedId === `PAY:${registration.paymentIntentId}`}
+                          onCopy={() => copyValue("PAY", registration.paymentIntentId)}
+                        />
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -436,5 +470,38 @@ export default function AdminPortal() {
         </section>
       </div>
     </main>
+  );
+}
+
+
+function IdCopyRow({
+  label,
+  value,
+  copied,
+  onCopy,
+}: {
+  label: string;
+  value: string | null;
+  copied: boolean;
+  onCopy: () => void;
+}) {
+  return (
+    <div className="flex max-w-[310px] items-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-2.5 py-2">
+      <span className="shrink-0 rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-black text-primary">
+        {label}
+      </span>
+      <span className="min-w-0 flex-1 truncate font-mono text-xs font-bold text-white/65" dir="ltr">
+        {value || "-"}
+      </span>
+      <button
+        type="button"
+        onClick={onCopy}
+        disabled={!value}
+        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-black/20 text-white/70 transition hover:border-primary/35 hover:text-primary active:scale-95 disabled:cursor-not-allowed disabled:opacity-35"
+        aria-label={`Copy ${label} ID`}
+      >
+        {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+      </button>
+    </div>
   );
 }
