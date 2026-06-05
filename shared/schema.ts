@@ -75,6 +75,10 @@ export const registrations = pgTable("registrations", {
   source: text("source").notNull().default("coach-tarek-registration-form"),
   rawPayment: jsonb("raw_payment"),
   paidAt: timestamp("paid_at", { withTimezone: true }),
+  confirmationEmailSentAt: timestamp("confirmation_email_sent_at", { withTimezone: true }),
+  confirmationEmailStatus: text("confirmation_email_status"),
+  confirmationEmailError: text("confirmation_email_error"),
+  confirmationEmailMessageId: text("confirmation_email_message_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

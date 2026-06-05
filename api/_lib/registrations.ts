@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto";
+import { buildConfirmationEmail, sendResendEmail } from "./confirmationEmail.js";
 
 const defaultCoachSlug = "coach-tarek";
 const defaultChallengeSlug = "coach-tarek-challenge";
@@ -34,6 +35,17 @@ async function getPool() {
 
 export function canUseRegistrationsDatabase() {
   return Boolean(process.env.DATABASE_URL);
+}
+
+async function ensureRegistrationEmailColumns() {
+  const pool = await getPool();
+  await pool.query(
+    `alter table registrations
+       add column if not exists confirmation_email_sent_at timestamptz,
+       add column if not exists confirmation_email_status text,
+       add column if not exists confirmation_email_error text,
+       add column if not exists confirmation_email_message_id text`,
+  );
 }
 
 function normalizeContact(input: any) {
@@ -189,6 +201,96 @@ export async function markRegistrationPaid({
   return result.rows[0];
 }
 
+async function getRegistrationConfirmationPayload(registrationId: string) {
+  const pool = await getPool();
+  await ensureRegistrationEmailColumns();
+
+  const result = await pool.query(
+    `select
+       r.id,
+       r.status,
+       r.confirmation_email_sent_at,
+       c.name as customer_name,
+       c.email as customer_email,
+       ch.entry_code as challenge_entry_code
+     from registrations r
+     join customers c on c.id = r.customer_id
+     join challenges ch on ch.id = r.challenge_id
+     where r.id = $1
+     limit 1`,
+    [registrationId],
+  );
+
+  return result.rows[0] as Record<string, any> | undefined;
+}
+
+export async function sendConfirmationEmailForRegistration({
+  registrationId,
+  origin,
+}: {
+  registrationId?: string | null;
+  origin?: string;
+}) {
+  if (!registrationId) {
+    return { skipped: true, reason: "missing_registration_id" };
+  }
+
+  const pool = await getPool();
+  const payload = await getRegistrationConfirmationPayload(registrationId);
+
+  if (!payload) {
+    return { skipped: true, reason: "registration_not_found" };
+  }
+
+  if (payload.status !== "paid") {
+    return { skipped: true, reason: "registration_not_paid" };
+  }
+
+  if (payload.confirmation_email_sent_at) {
+    return { skipped: true, reason: "already_sent" };
+  }
+
+  try {
+    const email = buildConfirmationEmail({
+      to: payload.customer_email,
+      customerName: payload.customer_name,
+      entryCode: payload.challenge_entry_code,
+      origin,
+    });
+    const result = await sendResendEmail({
+      to: payload.customer_email,
+      subject: email.subject,
+      html: email.html,
+      text: email.text,
+    });
+    const messageId =
+      result && typeof result === "object" && "id" in result ? String(result.id) : null;
+
+    await pool.query(
+      `update registrations
+       set confirmation_email_sent_at = now(),
+           confirmation_email_status = 'sent',
+           confirmation_email_error = null,
+           confirmation_email_message_id = $2,
+           updated_at = now()
+       where id = $1`,
+      [registrationId, messageId],
+    );
+
+    return { sent: true, messageId };
+  } catch (error) {
+    await pool.query(
+      `update registrations
+       set confirmation_email_status = 'failed',
+           confirmation_email_error = $2,
+           updated_at = now()
+       where id = $1`,
+      [registrationId, error instanceof Error ? error.message : "Unknown email error"],
+    );
+    throw error;
+  }
+}
+
 export async function updateRegistrationStatus({
   paymentIntentId,
   status,
@@ -230,6 +332,10 @@ export async function listRegistrations(status?: string) {
       r.payment_intent_id,
       r.operation_id,
       r.paid_at,
+      r.confirmation_email_sent_at,
+      r.confirmation_email_status,
+      r.confirmation_email_error,
+      r.confirmation_email_message_id,
       r.created_at,
       c.name as customer_name,
       c.email as customer_email,
@@ -257,6 +363,10 @@ export async function listRegistrations(status?: string) {
     paymentIntentId: row.payment_intent_id,
     operationId: row.operation_id,
     paidAt: row.paid_at,
+    confirmationEmailSentAt: row.confirmation_email_sent_at,
+    confirmationEmailStatus: row.confirmation_email_status,
+    confirmationEmailError: row.confirmation_email_error,
+    confirmationEmailMessageId: row.confirmation_email_message_id,
     createdAt: row.created_at,
     customer: {
       name: row.customer_name,

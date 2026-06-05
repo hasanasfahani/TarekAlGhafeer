@@ -57,3 +57,9 @@ create table if not exists registrations (
 create index if not exists registrations_status_idx on registrations(status);
 create index if not exists registrations_payment_intent_idx on registrations(payment_intent_id);
 create index if not exists registrations_created_at_idx on registrations(created_at desc);
+
+alter table registrations
+  add column if not exists confirmation_email_sent_at timestamptz,
+  add column if not exists confirmation_email_status text,
+  add column if not exists confirmation_email_error text,
+  add column if not exists confirmation_email_message_id text;

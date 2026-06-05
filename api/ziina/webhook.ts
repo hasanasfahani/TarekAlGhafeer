@@ -1,11 +1,13 @@
 import {
   canUseRegistrationsDatabase,
   markRegistrationPaid,
+  sendConfirmationEmailForRegistration,
   updateRegistrationStatus,
 } from "../_lib/registrations.js";
 
 type VercelLikeRequest = {
   method?: string;
+  headers: Record<string, string | string[] | undefined>;
   body?: any;
 };
 
@@ -48,6 +50,13 @@ function isPaidZiinaStatus(status: string | null) {
   return Boolean(status && ["completed", "paid", "succeeded", "success"].includes(status));
 }
 
+function getOrigin(req: VercelLikeRequest) {
+  const forwardedProto = req.headers["x-forwarded-proto"];
+  const proto = Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto;
+  const host = req.headers.host;
+  return `${proto || "https"}://${host}`;
+}
+
 export default async function handler(req: VercelLikeRequest, res: VercelLikeResponse) {
   try {
     if (req.method !== "POST") {
@@ -77,8 +86,18 @@ export default async function handler(req: VercelLikeRequest, res: VercelLikeRes
           status: payment.status || "payment_updated",
           rawPayment: req.body,
         });
+    const email =
+      registration?.status === "paid"
+        ? await sendConfirmationEmailForRegistration({
+            registrationId: registration.id,
+            origin: getOrigin(req),
+          }).catch((error) => ({
+            sent: false,
+            error: error instanceof Error ? error.message : "Unknown email error",
+          }))
+        : { skipped: true, reason: "registration_not_paid" };
 
-    return res.status(200).json({ registration });
+    return res.status(200).json({ registration, email });
   } catch (error) {
     return res.status(500).json({
       message: "Could not process Ziina webhook.",
