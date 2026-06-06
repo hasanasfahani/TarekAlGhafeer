@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
@@ -17,16 +17,8 @@ import {
 } from "lucide-react";
 
 import AppStoreBadges from "@/components/AppStoreBadges";
+import PaymentCheckoutDialog from "@/components/PaymentCheckoutDialog";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import enterCodeScreenshot from "@assets/registration-success/enter-code.webp";
 import registerTraineeScreenshot from "@assets/registration-success/register-trainee.webp";
 import selectChallengeScreenshot from "@assets/registration-success/select-challenge.webp";
@@ -52,6 +44,46 @@ type Step = {
   bullets?: string[];
   icon: React.ComponentType<{ className?: string }>;
 };
+
+declare global {
+  interface Window {
+    dataLayer?: Record<string, unknown>[];
+  }
+}
+
+const coachName = "tarek_alghafeer";
+const challengeName = "tarek_alghafeer_challenge";
+const fixedPaymentValue = 149;
+const fixedPaymentCurrency = "AED";
+
+type DataLayerPayload = Record<string, string | number | boolean | null | undefined>;
+
+function pushDataLayerEvent(payload: DataLayerPayload) {
+  if (typeof window === "undefined") return;
+
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push(payload);
+  console.info("[dataLayer]", payload.event, payload);
+}
+
+function trackingBase() {
+  return {
+    coach_name: coachName,
+    challenge_name: challengeName,
+  };
+}
+
+function amountToValue(amount: unknown) {
+  const numericAmount =
+    typeof amount === "number"
+      ? amount
+      : typeof amount === "string"
+        ? Number(amount)
+        : NaN;
+
+  if (!Number.isFinite(numericAmount)) return fixedPaymentValue;
+  return numericAmount > 1000 ? numericAmount / 100 : numericAmount;
+}
 
 const steps: Step[] = [
   {
@@ -174,10 +206,26 @@ const steps: Step[] = [
 
 const paymentStepIndex = steps.length - 1;
 
+const formStepNames = [
+  "intro",
+  "fitness_identity",
+  "main_obstacle",
+  "problem_context",
+  "fitnet_plan_preview",
+  "challenge_outcome",
+  "commitment_promise",
+  "offer_details",
+  "registration_urgency",
+  "payment_review",
+];
+
 function getInitialPaymentStatus() {
   if (typeof window === "undefined") return null;
 
   const path = window.location.pathname;
+  if (path.endsWith("/registration-success")) return "success";
+  if (path.endsWith("/payment-failed")) return "failed";
+  if (path.endsWith("/payment-cancelled")) return "cancelled";
   if (path.endsWith("/success")) return "success";
   if (path.endsWith("/failed")) return "failed";
   if (path.endsWith("/cancelled")) return "cancelled";
@@ -364,6 +412,12 @@ function PaymentSuccess() {
   const [paymentSyncStatus, setPaymentSyncStatus] = useState<
     "idle" | "syncing" | "synced" | "failed"
   >("idle");
+  const [paymentDetails, setPaymentDetails] = useState<{
+    transactionId: string | null;
+    value: number;
+    currency: string;
+    registrationId: string | null;
+  } | null>(null);
   const challengeCode = "336699";
 
   useEffect(() => {
@@ -371,7 +425,10 @@ function PaymentSuccess() {
     const registrationId = params.get("registration_id");
     const paymentIntentId = params.get("payment_intent_id");
 
-    if (!registrationId && !paymentIntentId) return;
+    if (!registrationId && !paymentIntentId) {
+      window.location.replace("/registration-form");
+      return;
+    }
 
     let cancelled = false;
     setPaymentSyncStatus("syncing");
@@ -381,9 +438,52 @@ function PaymentSuccess() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ registrationId, paymentIntentId }),
     })
-      .then((response) => {
+      .then(async (response) => {
         if (!response.ok) throw new Error("Could not sync payment.");
-        if (!cancelled) setPaymentSyncStatus("synced");
+        const data = await response.json().catch(() => null);
+        if (cancelled) return;
+
+        const registration = data?.registration ?? {};
+        if (registration.status !== "paid") {
+          throw new Error("Payment has not been confirmed.");
+        }
+        const transactionId =
+          registration.payment_intent_id ||
+          registration.paymentIntentId ||
+          paymentIntentId ||
+          registration.operation_id ||
+          registration.operationId ||
+          registration.id ||
+          registrationId;
+        const value = amountToValue(registration.amount);
+        const currency =
+          typeof registration.currency === "string"
+            ? registration.currency
+            : fixedPaymentCurrency;
+        const resolvedRegistrationId =
+          typeof registration.id === "string" ? registration.id : registrationId;
+
+        setPaymentDetails({
+          transactionId,
+          value,
+          currency,
+          registrationId: resolvedRegistrationId,
+        });
+        setPaymentSyncStatus("synced");
+
+        if (transactionId) {
+          const trackingKey = `purchase_tracked_${transactionId}`;
+          if (!window.localStorage.getItem(trackingKey)) {
+            pushDataLayerEvent({
+              event: "payment_success",
+              ...trackingBase(),
+              transaction_id: transactionId,
+              value,
+              currency,
+            });
+            window.localStorage.setItem(trackingKey, "true");
+          }
+        }
       })
       .catch(() => {
         if (!cancelled) setPaymentSyncStatus("failed");
@@ -478,6 +578,37 @@ function PaymentSuccess() {
               التنبيه، راح نثبّت الدفع من مزود الدفع.
             </p>
           ) : null}
+          {paymentDetails ? (
+            <div
+              dir="ltr"
+              className="mt-5 grid gap-3 rounded-xl border border-white/10 bg-black/25 p-4 text-left sm:grid-cols-3"
+            >
+              <div>
+                <p className="text-xs font-bold uppercase text-white/45">Amount</p>
+                <p className="mt-1 text-lg font-black text-white">
+                  {paymentDetails.value} {paymentDetails.currency}
+                </p>
+              </div>
+              <div className="sm:col-span-2">
+                <p className="text-xs font-bold uppercase text-white/45">
+                  Payment ID
+                </p>
+                <p className="mt-1 break-all text-sm font-bold text-white/80">
+                  {paymentDetails.transactionId}
+                </p>
+              </div>
+              {paymentDetails.registrationId ? (
+                <div className="sm:col-span-3">
+                  <p className="text-xs font-bold uppercase text-white/45">
+                    Registration ID
+                  </p>
+                  <p className="mt-1 break-all text-sm font-bold text-white/80">
+                    {paymentDetails.registrationId}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </section>
 
         <section className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -555,15 +686,7 @@ function PaymentSuccess() {
 function RegistrationFlow({ initialPaymentStatus }: { initialPaymentStatus: string | null }) {
   const [stepIndex, setStepIndex] = useState(() => getSavedStepIndex(initialPaymentStatus));
   const [answers, setAnswers] = useState<Record<number, string[]>>({});
-  const [paymentLoading, setPaymentLoading] = useState(false);
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
-  const [contactConfirmed, setContactConfirmed] = useState(false);
-  const [contactError, setContactError] = useState<string | null>(null);
-  const [contactInfo, setContactInfo] = useState({
-    name: "",
-    email: "",
-    whatsapp: "",
-  });
   const [paymentError, setPaymentError] = useState<string | null>(() =>
     initialPaymentStatus === "failed"
       ? "ما تمت عملية الدفع. جرّب مرة ثانية وثبّت مكانك قبل اكتمال العدد."
@@ -573,12 +696,39 @@ function RegistrationFlow({ initialPaymentStatus }: { initialPaymentStatus: stri
   const progress = ((stepIndex + 1) / steps.length) * 100;
   const selected = answers[stepIndex] ?? [];
   const canContinue = !step.options || selected.length > 0;
-  const contactFormIsValid =
-    contactInfo.name.trim().length >= 2 &&
-    /\S+@\S+\.\S+/.test(contactInfo.email.trim()) &&
-    contactInfo.whatsapp.trim().length >= 7 &&
-    contactConfirmed;
   const StepIcon = step.icon;
+  const formStartTrackedRef = useRef(false);
+
+  const trackFormStart = () => {
+    if (formStartTrackedRef.current) return;
+    formStartTrackedRef.current = true;
+
+    const trackingKey = "registration_form_start_tracked";
+    if (window.sessionStorage.getItem(trackingKey)) return;
+
+    pushDataLayerEvent({
+      event: "registration_form_start",
+      ...trackingBase(),
+    });
+    window.sessionStorage.setItem(trackingKey, "true");
+  };
+
+  const trackStepComplete = (completedStepIndex: number) => {
+    pushDataLayerEvent({
+      event: "registration_form_step_complete",
+      ...trackingBase(),
+      form_step: completedStepIndex + 1,
+      form_step_name: formStepNames[completedStepIndex],
+    });
+  };
+
+  useEffect(() => {
+    pushDataLayerEvent({
+      event: "registration_form_view",
+      ...trackingBase(),
+      page_type: "registration_form",
+    });
+  }, []);
 
   useEffect(() => {
     window.localStorage.setItem("registration-form-step", String(stepIndex));
@@ -586,68 +736,20 @@ function RegistrationFlow({ initialPaymentStatus }: { initialPaymentStatus: stri
 
   useEffect(() => {
     if (initialPaymentStatus === "cancelled" || initialPaymentStatus === "failed") {
+      pushDataLayerEvent({
+        event: "payment_failed",
+        ...trackingBase(),
+        failure_reason: initialPaymentStatus,
+      });
       window.history.replaceState({}, "", "/registration-form");
     }
   }, [initialPaymentStatus]);
 
-  const startPayment = async () => {
-    if (!contactFormIsValid) {
-      setContactError("عبّي معلوماتك وتأكد إنها صحيحة قبل المتابعة للدفع.");
-      return;
-    }
-
-    setPaymentLoading(true);
-    setPaymentError(null);
-    setContactError(null);
-    setIsContactDialogOpen(false);
-
-    try {
-      window.localStorage.setItem(
-        "registration-contact-info",
-        JSON.stringify({
-          name: contactInfo.name.trim(),
-          email: contactInfo.email.trim(),
-          whatsapp: contactInfo.whatsapp.trim(),
-        }),
-      );
-
-      const response = await fetch("/api/ziina/payment-intent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contact: {
-            name: contactInfo.name.trim(),
-            email: contactInfo.email.trim(),
-            whatsapp: contactInfo.whatsapp.trim(),
-          },
-          coachSlug: "coach-tarek",
-          challengeSlug: "coach-tarek-challenge",
-        }),
-      });
-
-      const data = await response.json().catch(() => null);
-
-      if (!response.ok || !data?.redirectUrl) {
-        throw new Error(data?.error || data?.message || "تعذر إنشاء رابط الدفع.");
-      }
-
-      window.localStorage.setItem("registration-form-step", String(paymentStepIndex));
-      if (data.registrationId) {
-        window.localStorage.setItem("registration-id", data.registrationId);
-      }
-      window.location.href = data.redirectUrl;
-    } catch (error) {
-      setPaymentError(
-        error instanceof Error ? error.message : "تعذر إنشاء رابط الدفع.",
-      );
-      setPaymentLoading(false);
-    }
-  };
-
   const goNext = async () => {
     if (!canContinue) return;
+    trackFormStart();
+    trackStepComplete(stepIndex);
     if (stepIndex === steps.length - 1) {
-      setContactError(null);
       setPaymentError(null);
       setIsContactDialogOpen(true);
       return;
@@ -660,6 +762,7 @@ function RegistrationFlow({ initialPaymentStatus }: { initialPaymentStatus: stri
   };
 
   const toggleAnswer = (option: string) => {
+    trackFormStart();
     setAnswers((current) => {
       const currentOptions = current[stepIndex] ?? [];
       const nextOptions = currentOptions.includes(option)
@@ -835,10 +938,10 @@ function RegistrationFlow({ initialPaymentStatus }: { initialPaymentStatus: stri
                 <Button
                   type="button"
                   onClick={goNext}
-                  disabled={!canContinue || paymentLoading}
+                  disabled={!canContinue}
                   className="h-14 bg-primary px-8 text-lg font-extrabold text-primary-foreground shadow-[0_0_28px_rgba(0,191,107,0.28)] hover:bg-primary/90 disabled:opacity-45"
                 >
-                  {paymentLoading ? "جاري تجهيز الدفع..." : step.cta}
+                  {step.cta}
                   <ArrowLeft className="mr-2 h-5 w-5" />
                 </Button>
                 {stepIndex === paymentStepIndex ? (
@@ -851,113 +954,13 @@ function RegistrationFlow({ initialPaymentStatus }: { initialPaymentStatus: stri
           </section>
 
         </div>
-        <Dialog open={isContactDialogOpen} onOpenChange={setIsContactDialogOpen}>
-          <DialogContent
-            dir="rtl"
-            className="max-h-[92vh] w-[calc(100vw-1.5rem)] overflow-y-auto rounded-3xl border-white/10 bg-[#0b0f0d] p-5 text-white shadow-[0_26px_90px_rgba(0,0,0,0.55)] sm:max-w-md sm:p-6"
-          >
-            <DialogHeader className="space-y-3 text-right">
-              <DialogTitle className="text-2xl font-extrabold text-white">
-                خلّينا نجهّز كود دخولك
-              </DialogTitle>
-              <DialogDescription className="text-base font-semibold leading-relaxed text-white/65">
-                أضف اسمك، إيميلك، ورقم الواتساب حتى نقدر نرسل لك كود دخول
-                التحدي وتفاصيل البداية بعد إتمام الدفع.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="mt-5 space-y-4">
-              <label className="block space-y-2">
-                <span className="text-sm font-extrabold text-white/80">الاسم الكامل</span>
-                <Input
-                  value={contactInfo.name}
-                  onChange={(event) =>
-                    setContactInfo((current) => ({
-                      ...current,
-                      name: event.target.value,
-                    }))
-                  }
-                  placeholder="مثال: طارق الغفير"
-                  className="h-14 rounded-2xl border-white/10 bg-white/[0.04] text-base font-bold text-white placeholder:text-white/30 focus-visible:ring-primary"
-                />
-              </label>
-
-              <label className="block space-y-2">
-                <span className="text-sm font-extrabold text-white/80">الإيميل</span>
-                <Input
-                  type="email"
-                  value={contactInfo.email}
-                  onChange={(event) =>
-                    setContactInfo((current) => ({
-                      ...current,
-                      email: event.target.value,
-                    }))
-                  }
-                  placeholder="name@example.com"
-                  dir="ltr"
-                  className="h-14 rounded-2xl border-white/10 bg-white/[0.04] text-left text-base font-bold text-white placeholder:text-white/30 focus-visible:ring-primary"
-                />
-              </label>
-
-              <label className="block space-y-2">
-                <span className="text-sm font-extrabold text-white/80">
-                  رقم واتساب
-                </span>
-                <Input
-                  type="tel"
-                  value={contactInfo.whatsapp}
-                  onChange={(event) =>
-                    setContactInfo((current) => ({
-                      ...current,
-                      whatsapp: event.target.value,
-                    }))
-                  }
-                  placeholder="+971 50 000 0000"
-                  dir="ltr"
-                  className="h-14 rounded-2xl border-white/10 bg-white/[0.04] text-left text-base font-bold text-white placeholder:text-white/30 focus-visible:ring-primary"
-                />
-              </label>
-
-              <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-primary/20 bg-primary/10 p-4">
-                <Checkbox
-                  checked={contactConfirmed}
-                  onCheckedChange={(checked) => setContactConfirmed(checked === true)}
-                  className="mt-1 border-primary data-[state=checked]:bg-primary data-[state=checked]:text-black"
-                />
-                <span className="text-sm font-bold leading-relaxed text-white/80">
-                  أؤكد أن الاسم والإيميل ورقم الواتساب صحيحين، حتى يوصلني كود
-                  دخول التحدي بدون تأخير.
-                </span>
-              </label>
-
-              {contactError ? (
-                <p className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-100">
-                  {contactError}
-                </p>
-              ) : null}
-            </div>
-
-            <div className="mt-6 grid gap-3">
-              <Button
-                type="button"
-                onClick={startPayment}
-                disabled={paymentLoading || !contactFormIsValid}
-                className="h-14 rounded-2xl bg-primary text-lg font-extrabold text-primary-foreground shadow-[0_0_28px_rgba(0,191,107,0.26)] hover:bg-primary/90 disabled:opacity-45"
-              >
-                {paymentLoading ? "جاري تجهيز الدفع..." : "متابعة للدفع"}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsContactDialogOpen(false)}
-                disabled={paymentLoading}
-                className="h-12 rounded-2xl border-white/10 bg-white/[0.03] text-white hover:bg-white/10 hover:text-white"
-              >
-                رجوع
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <PaymentCheckoutDialog
+          open={isContactDialogOpen}
+          onOpenChange={setIsContactDialogOpen}
+          source="registration_form"
+          onError={setPaymentError}
+          onInteraction={trackFormStart}
+        />
       </div>
     </main>
   );
