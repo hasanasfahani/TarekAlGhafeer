@@ -24,7 +24,7 @@ export default function Hero() {
   };
 
   return (
-    <section className="relative min-h-screen flex items-center overflow-hidden">
+    <section id="hero" className="relative min-h-screen flex items-center overflow-hidden">
       {/* Background Image with Effects */}
       <div className="absolute inset-0 z-0">
         <img 
@@ -82,11 +82,27 @@ export default function Hero() {
                   : "max-w-[11ch] font-heading text-5xl font-bold uppercase leading-[0.9] md:text-7xl lg:text-8xl"
               }`}
             >
-              {t.hero.titlePrefix} <span className="text-primary">{t.hero.titleHighlight}</span>{" "}
-              {t.hero.titleSuffix}{" "}
-              <span dir="ltr" className="ms-1 inline-flex translate-y-[0.02em] items-center gap-1 whitespace-nowrap align-middle text-[0.82em] leading-none">
-                {t.hero.prizeEmojis}
-              </span>
+              {isArabic ? (
+                <span dir="rtl" className="[unicode-bidi:plaintext]">
+                  {t.hero.titlePrefix}{" "}
+                  <span className="text-primary">{t.hero.titleHighlight}</span>{" "}
+                  {t.hero.titleSuffix}
+                </span>
+              ) : (
+                <>
+                  {t.hero.titlePrefix}{" "}
+                  <span className="text-primary">{t.hero.titleHighlight}</span>{" "}
+                  {t.hero.titleSuffix}{" "}
+                  {t.hero.prizeEmojis ? (
+                    <span
+                      dir="ltr"
+                      className="ms-1 inline-flex translate-y-[0.02em] items-center gap-1 whitespace-nowrap align-middle text-[0.82em] leading-none"
+                    >
+                      {t.hero.prizeEmojis}
+                    </span>
+                  ) : null}
+                </>
+              )}
             </motion.h1>
 
             <motion.p

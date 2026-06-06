@@ -16,7 +16,7 @@ export default function Navbar() {
   }, []);
 
   const scrollToHero = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    document.getElementById("hero")?.scrollIntoView({ behavior: "smooth" });
   };
 
   return (
@@ -50,7 +50,7 @@ export default function Navbar() {
             className={`bg-primary text-primary-foreground hover:bg-primary/90 font-bold ${
               isArabic ? "" : "uppercase tracking-wide"
             }`}
-            onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
+            onClick={scrollToHero}
           >{t.nav.join}</Button>
         </div>
 
@@ -71,7 +71,7 @@ export default function Navbar() {
               className={`bg-primary text-primary-foreground font-bold text-xs ${
                 isArabic ? "" : "uppercase"
               }`}
-              onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
+              onClick={scrollToHero}
             >{t.nav.join}</Button>
         </div>
       </div>
