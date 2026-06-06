@@ -7,6 +7,20 @@ import { useLanguage } from "@/lib/i18n";
 export default function Hero() {
   const { t, isArabic } = useLanguage();
 
+  const openPaymentStep = () => {
+    window.localStorage.setItem("registration-form-step", "9");
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+      event: "hero_payment_cta_click",
+      coach_name: "tarek_alghafeer",
+      challenge_name: "tarek_alghafeer_challenge",
+      value: 149,
+      currency: "AED",
+      cta_location: "main_hero",
+    });
+    window.location.href = "/registration-form";
+  };
+
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden">
       {/* Background Image with Effects */}
@@ -73,6 +87,18 @@ export default function Hero() {
               </span>
             </motion.h1>
 
+            <motion.p
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.12 }}
+              dir={isArabic ? "rtl" : "ltr"}
+              className={`max-w-[680px] text-lg font-bold leading-relaxed text-white/75 md:text-xl ${
+                isArabic ? "self-end text-right" : "self-start text-left"
+              }`}
+            >
+              {t.hero.subtitle}
+            </motion.p>
+
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -83,7 +109,8 @@ export default function Hero() {
             >
               <div className={`flex flex-col gap-4 ${isArabic ? "w-full items-end sm:max-w-[580px]" : "items-start"}`}>
                 <Button 
-                  onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
+                  onClick={openPaymentStep}
+                  data-testid="hero-payment-cta"
                   className={`h-14 bg-primary px-8 text-lg font-bold text-primary-foreground shadow-[0_0_20px_rgba(0,191,107,0.3)] transition-all hover:scale-105 hover:bg-primary/90 ${
                     isArabic ? "w-full self-end" : "w-full uppercase tracking-wider md:w-auto"
                   }`}

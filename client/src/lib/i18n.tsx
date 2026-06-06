@@ -12,9 +12,11 @@ const translations = {
     hero: {
       titlePrefix: "غيّر جسمك مع",
       titleHighlight: "الكوتش طارق",
-      titleSuffix: "واربح الملايين",
-      prizeEmojis: "💸💰",
-      cta: "اشترك بـ $29.9 بس",
+      titleSuffix: "واكسب ثقة أكبر",
+      prizeEmojis: "",
+      subtitle:
+        "تدريب شخصي اونلاين: خطة تدريب وتغذية مخصصين ومتابعة لمدة شهر ومشاركة في التحدي",
+      cta: "اشترك ب١٤٩ فقط",
       seats: "المقاعد محدودة",
     },
     benefits: {
@@ -74,6 +76,8 @@ const translations = {
       titleHighlight: "Coach Tarek",
       titleSuffix: "AND WIN MIllIONS",
       prizeEmojis: "💸💰",
+      subtitle:
+        "Online personal coaching: customized training and nutrition plans, one month of follow-up, and challenge participation.",
       cta: "JOIN FOR ONLY $29.9",
       seats: "Limited seats available",
     },
