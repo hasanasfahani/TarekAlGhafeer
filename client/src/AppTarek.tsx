@@ -17,7 +17,7 @@ function Router() {
       <Route path="/registration-form/cancelled" component={RegistrationForm} />
       <Route path="/registration-form" component={RegistrationForm} />
       <Route path="/admin" component={AdminPortal} />
-      <Route path="/main-website" component={Home} />
+      <Route path="/main" component={Home} />
       <Route path="/" component={Home} />
       <Route component={NotFound} />
     </Switch>
