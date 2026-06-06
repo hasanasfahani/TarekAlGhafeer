@@ -12,20 +12,20 @@ const translations = {
     hero: {
       titlePrefix: "غيّر جسمك مع",
       titleHighlight: "الكوتش طارق",
-      titleSuffix: "واكسب ثقة أكبر",
+      titleSuffix: "وارجع واثق بنفسك أكثر",
       prizeEmojis: "",
       subtitle:
-        "تدريب شخصي اونلاين: خطة تدريب وتغذية مخصصين ومتابعة لمدة شهر ومشاركة في التحدي",
-      cta: "اشترك ب149 درهم إماراتي فقط",
+        "تدريب أونلاين لمدة شهر: خطة تمرين، خطة تغذية، ومتابعة مع الكوتش ضمن التحدي",
+      cta: "اشترك بـ 149 درهم فقط",
       seats: "المقاعد محدودة",
     },
     benefits: {
       titlePrefix: "ليش تنضم",
-      titleHighlight: "للتحدّي؟",
+      titleHighlight: "للتحدي؟",
       items: [
-        "رح تكون راضي عن نفسك بعد شهر التزام ورح تحصل على:\n* خطة تدريبية\n* خطة تغذية\nليكون طريقك واضح",
-        "احرق أكثر… نافس أكثر… واربح 💰\nتنافس مع باقي المشاركين حسب عدد الحريرات التي تحرقها خلال الشهر.",
-        "كون جزء من مجتمع داعم بقيادة الكوتش، يخلّيك متحمّس وما تحس إنك عم تتمرن لحالك.",
+        "بعد شهر من الالتزام، بتشوف الفرق بنفسك، وبيكون عندك:\n* خطة تمرين واضحة\n* خطة تغذية مناسبة\n* طريق واضح تمشي عليه بدون حيرة",
+        "احرق أكثر… نافس أكثر… واربح 💰\nتنافس مع باقي المشاركين حسب عدد السعرات اللي تحرقها خلال الشهر.",
+        "لا تتمرن بروحك.\nادخل مجتمع داعم بقيادة الكوتش، يخليك متحمس ومكمل للنهاية.",
       ],
     },
     how: {
@@ -42,9 +42,9 @@ const translations = {
       titlePrefix: "خبرة حقيقية.",
       titleHighlight: "نتائج حقيقية.",
       yearsNumber: "",
-      yearsLabel: "خبرة أكتر من 10 سنين",
+      yearsLabel: "أكثر من 10 سنوات خبرة",
       traineesNumber: "",
-      traineesLabel: "أكتر من 500 متدرّب مبسوط",
+      traineesLabel: "أكثر من 500 متدرب راضي",
       transformations: [
         { label: "نتائج مميزة", description: "تحوّل خلال 12 أسبوع" },
         { label: "تنشيف كامل", description: "برنامج 16 أسبوع" },
@@ -56,8 +56,8 @@ const translations = {
     final: {
       titlePrefix: "جاهز تبدأ",
       titleHighlight: "التغيير؟",
-      subtitle: "تمرّن. تابع تقدّمك. وتغيّر — معنا.",
-      cta: "يلا نبلّش!",
+      subtitle: "تمرّن. تابع تقدمك. وتغير معنا.",
+      cta: "يلا نبدأ!",
       powered: "بدعم من تطبيق Fitnet",
     },
     appStores: {
@@ -74,20 +74,20 @@ const translations = {
     hero: {
       titlePrefix: "Transform Your Body With",
       titleHighlight: "Coach Tarek",
-      titleSuffix: "AND WIN MIllIONS",
-      prizeEmojis: "💸💰",
+      titleSuffix: "AND FEEL CONFIDENT AGAIN",
+      prizeEmojis: "",
       subtitle:
-        "Online personal coaching: customized training and nutrition plans, one month of follow-up, and challenge participation.",
-      cta: "JOIN FOR ONLY $29.9",
+        "One month of online coaching: a workout plan, nutrition plan, and coach follow-up as part of the challenge.",
+      cta: "JOIN FOR ONLY AED 149",
       seats: "Limited seats available",
     },
     benefits: {
-      titlePrefix: "Why Join My",
-      titleHighlight: "Challenge:",
+      titlePrefix: "Why Join the",
+      titleHighlight: "Challenge?",
       items: [
-        "You’ll feel proud of yourself after one month of commitment and you’ll get:\n* A training plan\n* A nutrition plan\nso your path is clear",
-        "Burn more... compete more... and win 💰\nCompete with the other participants based on the calories you burn during the month.",
-        "Be part of a supportive, coach-led community that keeps you motivated and never alone.",
+        "After one month of commitment, you’ll see the difference yourself, with:\n* A clear workout plan\n* A suitable nutrition plan\n* A clear path to follow without confusion",
+        "Burn more… compete more… and win 💰\nCompete with other participants based on the calories you burn during the month.",
+        "Don’t train alone.\nJoin a supportive, coach-led community that keeps you motivated and moving through to the finish.",
       ],
     },
     how: {
@@ -104,9 +104,9 @@ const translations = {
       titlePrefix: "Real Experience.",
       titleHighlight: "Real Results.",
       yearsNumber: "10+",
-      yearsLabel: "Years Experience",
+      yearsLabel: "More Than 10 Years of Experience",
       traineesNumber: "500+",
-      traineesLabel: "Happy Trainees",
+      traineesLabel: "More Than 500 Satisfied Trainees",
       transformations: [
         { label: "Amazing Progress", description: "12 Week Transformation" },
         { label: "Complete Shred", description: "16 Week Program" },
@@ -118,8 +118,8 @@ const translations = {
     final: {
       titlePrefix: "Are you ready to start your",
       titleHighlight: "transformation?",
-      subtitle: "Train. Track. Transform - together.",
-      cta: "Let's Start",
+      subtitle: "Train. Track your progress. Transform with us.",
+      cta: "Let’s Start!",
       powered: "Powered by Fitnet App",
     },
     appStores: {
