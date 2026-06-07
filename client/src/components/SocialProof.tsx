@@ -1,4 +1,4 @@
-import { Users, Trophy } from "lucide-react";
+import { ArrowUpRight, Instagram, Users, Trophy } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 
 import transformation1 from "@assets/optimized/tarek-transformation-1.webp";
@@ -79,6 +79,35 @@ export default function SocialProof() {
           <CounterCard number={t.social.yearsNumber} label={t.social.yearsLabel} icon={Trophy} />
           <CounterCard number={t.social.traineesNumber} label={t.social.traineesLabel} icon={Users} />
         </div>
+
+        <a
+          href="https://www.instagram.com/tarekalghafeer/"
+          target="_blank"
+          rel="noreferrer"
+          aria-label={t.social.instagramAriaLabel}
+          className="group mx-auto mb-12 flex w-full max-w-2xl items-center gap-4 rounded-2xl border border-white/10 bg-card p-4 text-start transition-all hover:-translate-y-0.5 hover:border-primary/35 hover:bg-white/[0.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:p-5"
+        >
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#833ab4] via-[#fd1d1d] to-[#fcb045] shadow-[0_10px_30px_rgba(253,29,29,0.18)]">
+            <Instagram className="h-7 w-7 text-white" aria-hidden="true" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold text-white/50">
+              {t.social.instagramLabel}
+            </span>
+            <span
+              dir="ltr"
+              className="mt-0.5 block truncate text-xl font-bold text-white sm:text-2xl"
+            >
+              @tarekalghafeer
+            </span>
+          </span>
+          <ArrowUpRight
+            className={`h-5 w-5 shrink-0 text-white/35 transition-all group-hover:text-primary ${
+              isArabic ? "group-hover:-translate-x-0.5" : "group-hover:translate-x-0.5"
+            } group-hover:-translate-y-0.5`}
+            aria-hidden="true"
+          />
+        </a>
 
         <TransformationGallery />
       </div>

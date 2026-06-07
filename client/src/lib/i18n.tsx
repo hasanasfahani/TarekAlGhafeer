@@ -45,6 +45,8 @@ const translations = {
       yearsLabel: "أكثر من 10 سنوات خبرة",
       traineesNumber: "",
       traineesLabel: "أكثر من 500 متدرب راضي",
+      instagramLabel: "تابع الكوتش طارق على إنستغرام",
+      instagramAriaLabel: "زيارة حساب الكوتش طارق على إنستغرام",
       transformations: [
         { label: "نتائج مميزة", description: "تحوّل خلال 12 أسبوع" },
         { label: "تنشيف كامل", description: "برنامج 16 أسبوع" },
@@ -107,6 +109,8 @@ const translations = {
       yearsLabel: "More Than 10 Years of Experience",
       traineesNumber: "500+",
       traineesLabel: "More Than 500 Satisfied Trainees",
+      instagramLabel: "Follow Coach Tarek on Instagram",
+      instagramAriaLabel: "Visit Coach Tarek on Instagram",
       transformations: [
         { label: "Amazing Progress", description: "12 Week Transformation" },
         { label: "Complete Shred", description: "16 Week Program" },
