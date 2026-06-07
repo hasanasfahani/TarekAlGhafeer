@@ -1,11 +1,51 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+@font-face {
+  font-family: "Pilcrow Rounded";
+  src: url("/fonts/pilcrow-rounded/PilcrowRounded-Regular.otf") format("opentype");
+  font-style: normal;
+  font-weight: 300 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Pilcrow Rounded";
+  src: url("/fonts/pilcrow-rounded/PilcrowRounded-Medium.otf") format("opentype");
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Pilcrow Rounded";
+  src: url("/fonts/pilcrow-rounded/PilcrowRounded-Semibold.otf") format("opentype");
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Pilcrow Rounded";
+  src: url("/fonts/pilcrow-rounded/PilcrowRounded-Bold.otf") format("opentype");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Pilcrow Rounded";
+  src: url("/fonts/pilcrow-rounded/PilcrowRounded-Heavy.otf") format("opentype");
+  font-style: normal;
+  font-weight: 800 900;
+  font-display: swap;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: 'Inter', sans-serif;
-  --font-heading: 'Oswald', sans-serif;
+  --font-sans: "Pilcrow Rounded", sans-serif;
+  --font-heading: "Pilcrow Rounded", sans-serif;
 
   --color-background: hsl(0 0% 2%); /* #050505 - Near Black */
   --color-foreground: hsl(0 0% 95%);
@@ -48,7 +88,7 @@
   html[lang="ar"] body,
   html[lang="ar"] body *,
   html[lang="ar"] .font-heading {
-    font-family: "IBM Plex Sans Arabic", Inter, "Segoe UI", Tahoma, Arial, sans-serif !important;
+    font-family: "IBM Plex Sans Arabic", "Segoe UI", Tahoma, Arial, sans-serif !important;
     letter-spacing: 0;
   }
   button,
