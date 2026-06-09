@@ -16,6 +16,16 @@ export const defaultChallengeAmount = 14900;
 export const defaultChallengeCurrency = "AED";
 export const defaultChallengeName = "Coach Tarek Challenge";
 export const defaultChallengeEntryCode = "336699";
+const packageAmounts = {
+  "premium-single": 14900,
+  "premium-duo": 24900,
+} as const;
+
+type PaidPackageId = keyof typeof packageAmounts;
+
+function getPaidPackageId(input: unknown): PaidPackageId {
+  return input === "premium-duo" ? "premium-duo" : "premium-single";
+}
 
 export type RegistrationRecord = {
   id: string;
@@ -103,10 +113,14 @@ export async function ensureDefaultChallenge() {
   return { coach, challenge };
 }
 
-export async function createPendingRegistration(contactInput: unknown) {
+export async function createPendingRegistration(
+  contactInput: unknown,
+  packageInput?: unknown,
+) {
   const contact = normalizeContact(contactInput);
   const db = getDb();
   const { coach, challenge } = await ensureDefaultChallenge();
+  const packageId = getPaidPackageId(packageInput);
 
   const [customer] = await db
     .insert(customers)
@@ -127,8 +141,42 @@ export async function createPendingRegistration(contactInput: unknown) {
       status: "pending",
       paymentProvider: "ziina",
       operationId,
-      amount: challenge.priceAmount,
+      amount: packageAmounts[packageId],
       currency: challenge.currency,
+      rawPayment: { packageId },
+    })
+    .returning();
+
+  return { customer, coach, challenge, registration };
+}
+
+export async function createFreeRegistration(contactInput: unknown) {
+  const contact = normalizeContact(contactInput);
+  const db = getDb();
+  const { coach, challenge } = await ensureDefaultChallenge();
+
+  const [customer] = await db
+    .insert(customers)
+    .values({
+      name: contact.name.trim(),
+      email: contact.email.trim().toLowerCase(),
+      whatsapp: contact.whatsapp.trim(),
+    })
+    .returning();
+
+  const [registration] = await db
+    .insert(registrations)
+    .values({
+      customerId: customer.id,
+      coachId: coach.id,
+      challengeId: challenge.id,
+      status: "paid",
+      paymentProvider: "free",
+      operationId: randomUUID(),
+      amount: 0,
+      currency: challenge.currency,
+      rawPayment: { packageId: "free" },
+      paidAt: new Date(),
     })
     .returning();
 

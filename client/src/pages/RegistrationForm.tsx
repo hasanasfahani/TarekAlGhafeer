@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
+  ArrowRight,
   Check,
   Clipboard,
   CreditCard,
@@ -9,6 +10,7 @@ import {
   Flame,
   Gauge,
   Instagram,
+  Languages,
   Lock,
   Medal,
   Sparkles,
@@ -18,7 +20,10 @@ import {
 
 import AppStoreBadges from "@/components/AppStoreBadges";
 import PaymentCheckoutDialog from "@/components/PaymentCheckoutDialog";
+import PackagesTable from "@/components/PackagesTable";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/lib/i18n";
+import { isPackageId, type PackageId } from "@/lib/packages";
 import enterCodeScreenshot from "@assets/registration-success/enter-code.webp";
 import registerTraineeScreenshot from "@assets/registration-success/register-trainee.webp";
 import selectChallengeScreenshot from "@assets/registration-success/select-challenge.webp";
@@ -31,7 +36,6 @@ import traineeHomePreview from "@assets/registration-flow/trainee-home.jpg";
 import workoutPerformanceGif from "@assets/registration-flow/workout-performance.gif";
 import stepSixCelebration from "@assets/registration-flow/step-6-celebration.gif";
 import stepNineUrgency from "@assets/registration-flow/step-9-urgency.gif";
-import stepTenValue from "@assets/registration-flow/step-10-value.gif";
 
 type Step = {
   eyebrow: string;
@@ -85,7 +89,7 @@ function amountToValue(amount: unknown) {
   return numericAmount > 1000 ? numericAmount / 100 : numericAmount;
 }
 
-const steps: Step[] = [
+const arabicSteps: Step[] = [
   {
     eyebrow: "البداية",
     title: "مو ناقصك حماس لتتمرن وتلتزم.\nناقصك نظام وجو يخلوك تكمل.",
@@ -93,7 +97,7 @@ const steps: Step[] = [
       "ادخل تحدي كوتش طارق على فتنت",
       "وابدأ مع ناس عندها نفس هدفك.",
     ],
-    cta: "خليني أشوف إذا بيناسبني",
+    cta: "خبرني أكثر",
     icon: Sparkles,
   },
   {
@@ -192,19 +196,128 @@ const steps: Step[] = [
     icon: Flame,
   },
   {
-    eyebrow: "قيمة الدخول",
-    title: "١٤٩ درهم فقط للدخول في تحدي كامل.",
-    lines: [
-      "السعر مو مقابل جدول تمرين فقط.",
-      "السعر مقابل نظام يساعدك ترجع تلتزم وتكون فخور بنفسك أكتر.",
-      "يشمل: خطة، متابعة، منافسة، وفرصة للفوز بجوائز.",
-    ],
-    cta: "الاستمرار للدفع",
+    eyebrow: "اختر باقتك",
+    title: "اختر الباقة اللي تناسب هدفك.",
+    cta: "اختر الباقة",
     icon: CreditCard,
   },
 ];
 
-const paymentStepIndex = steps.length - 1;
+const englishSteps: Step[] = [
+  {
+    eyebrow: "Start",
+    title: "You do not need more motivation.\nYou need a system that helps you stay consistent.",
+    lines: [
+      "Join Coach Tarek's challenge on Fitnet",
+      "and start with people working toward the same goal.",
+    ],
+    cta: "Tell me more",
+    icon: Sparkles,
+  },
+  {
+    eyebrow: "Your next version",
+    title: "What version of yourself do you want to build?",
+    options: [
+      "Lighter and more active",
+      "Stronger and more confident",
+      "Consistent and in control of my day",
+      "Back in the gym without quitting after a week",
+    ],
+    cta: "Next",
+    icon: Gauge,
+  },
+  {
+    eyebrow: "The real obstacle",
+    title: "What usually makes you stop?",
+    options: [
+      "I start and stop quickly",
+      "I do not see results",
+      "I train without a clear plan",
+      "I get bored training alone",
+      "I have no one following up with me",
+    ],
+    cta: "Continue",
+    icon: Lock,
+  },
+  {
+    eyebrow: "It is clear",
+    title: "The problem is not that you do not want it.",
+    lines: [
+      "You have been trying without a system that keeps you moving:",
+      "a plan, guidance, and competition.",
+    ],
+    cta: "How does the challenge help?",
+    icon: Check,
+  },
+  {
+    eyebrow: "Day one",
+    title: "Imagine your first day in the challenge...",
+    lines: [
+      "You open Fitnet, find your plan ready, know exactly what to train, and log your workout.",
+      "With every effort, your ranking starts to move.",
+    ],
+    cta: "Got it",
+    icon: Dumbbell,
+  },
+  {
+    eyebrow: "At the finish",
+    title: "By the end of the challenge...",
+    lines: [
+      "You will not have only trained for a month.",
+      "You will have proved that you can stay consistent, move forward, and rebuild your confidence.",
+    ],
+    cta: "What is the plan?",
+    icon: Trophy,
+  },
+  {
+    eyebrow: "A promise to yourself",
+    title: "If you join, what promise will you make to yourself?",
+    options: [
+      "Stay consistent even when I am not in the mood",
+      "Train according to the plan",
+      "Do not quit after the first week",
+      "Build my confidence again",
+    ],
+    response: [
+      "Perfect.",
+      "Let us support that promise with a clear plan and a challenge starting mid-month.",
+    ],
+    cta: "What will I get?",
+    icon: Medal,
+  },
+  {
+    eyebrow: "The challenge",
+    title: "Coach Tarek's Challenge on Fitnet",
+    lines: ["The system that helps you keep going:"],
+    bullets: [
+      "A clear workout plan in the app",
+      "A nutrition plan that guides your meals",
+      "Guidance from Coach Tarek",
+      "Competition with participants",
+      "Ranking based on consistency and calories burned",
+      "A chance to win prizes",
+    ],
+    cta: "I want to join",
+    icon: Users,
+  },
+  {
+    eyebrow: "The round is close",
+    title: "The challenge starts mid-month, and registration closes before launch.",
+    lines: [
+      "Once the challenge begins, entry closes for that round to keep the competition fair.",
+    ],
+    cta: "Reserve my place",
+    icon: Flame,
+  },
+  {
+    eyebrow: "Choose your package",
+    title: "Pick the package that fits your goal.",
+    cta: "Choose a package",
+    icon: CreditCard,
+  },
+];
+
+const paymentStepIndex = arabicSteps.length - 1;
 
 const formStepNames = [
   "intro",
@@ -243,17 +356,17 @@ function getSavedStepIndex(paymentStatus: string | null) {
   return Number.isFinite(saved) ? Math.min(Math.max(saved, 0), paymentStepIndex) : 0;
 }
 
-function CompactResultsProof() {
+function CompactResultsProof({ isArabic }: { isArabic: boolean }) {
   const stats = [
     {
       icon: Trophy,
       value: "+10",
-      label: "سنين خبرة",
+      label: isArabic ? "سنين خبرة" : "Years of experience",
     },
     {
       icon: Users,
       value: "+500",
-      label: "متدرّب",
+      label: isArabic ? "متدرّب" : "Trainees",
     },
   ];
   const photos = [transformation1, transformation2, transformation3];
@@ -262,7 +375,7 @@ function CompactResultsProof() {
     <div className="mt-7 rounded-2xl border border-primary/20 bg-primary/10 p-3 sm:p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
         <p className="text-sm font-extrabold text-primary">
-          خبرة طويلة. نتائج حقيقية.
+          {isArabic ? "خبرة طويلة. نتائج حقيقية." : "Real experience. Real results."}
         </p>
         <a
           href="https://www.instagram.com/tarekalghafeer/"
@@ -295,7 +408,7 @@ function CompactResultsProof() {
           <img
             key={photo}
             src={photo}
-            alt={`نتيجة تحول رقم ${index + 1}`}
+            alt={isArabic ? `نتيجة تحول رقم ${index + 1}` : `Transformation result ${index + 1}`}
             className="h-28 w-24 shrink-0 rounded-xl border border-white/10 object-cover sm:h-32 sm:w-28"
             loading={index === 0 ? "eager" : "lazy"}
             decoding="async"
@@ -306,29 +419,29 @@ function CompactResultsProof() {
   );
 }
 
-function FitnetScreensPreview() {
+function FitnetScreensPreview({ isArabic }: { isArabic: boolean }) {
   const screens = [
     {
       image: challengeMainPreview,
-      title: "الساحة",
-      alt: "شاشة الساحة داخل تحدي Fitnet",
+      title: isArabic ? "الساحة" : "Community",
+      alt: isArabic ? "شاشة الساحة داخل تحدي Fitnet" : "Fitnet challenge community screen",
     },
     {
       image: challengeLeaderboardPreview,
-      title: "الترتيب",
-      alt: "شاشة ترتيب المشاركين داخل تحدي Fitnet",
+      title: isArabic ? "الترتيب" : "Leaderboard",
+      alt: isArabic ? "شاشة ترتيب المشاركين داخل تحدي Fitnet" : "Fitnet challenge leaderboard",
     },
     {
       image: traineeHomePreview,
-      title: "تقدمك",
-      alt: "شاشة متابعة تقدم المتدرب في Fitnet",
+      title: isArabic ? "تقدمك" : "Progress",
+      alt: isArabic ? "شاشة متابعة تقدم المتدرب في Fitnet" : "Fitnet trainee progress screen",
     },
   ];
 
   return (
     <div className="mt-7 rounded-2xl border border-white/10 bg-white/[0.04] p-3">
       <p className="mb-3 text-sm font-extrabold text-primary">
-        هيك رح تشوف نظامك داخل Fitnet
+        {isArabic ? "هيك رح تشوف نظامك داخل Fitnet" : "This is how your system looks inside Fitnet"}
       </p>
       <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {screens.map((screen, index) => (
@@ -350,16 +463,16 @@ function FitnetScreensPreview() {
   );
 }
 
-function WorkoutScreensPreview() {
+function WorkoutScreensPreview({ isArabic }: { isArabic: boolean }) {
   return (
     <div className="mt-7 rounded-2xl border border-white/10 bg-white/[0.04] p-3">
       <p className="mb-3 text-sm font-extrabold text-primary">
-        تمرن بوضوح وتابع أداءك
+        {isArabic ? "تمرن بوضوح وتابع أداءك" : "Train with clarity and track your performance"}
       </p>
       <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/35">
         <img
           src={workoutPerformanceGif}
-          alt="تمرين واضح ومتابعة الأداء داخل تطبيق Fitnet"
+          alt={isArabic ? "تمرين واضح ومتابعة الأداء داخل تطبيق Fitnet" : "Workout and performance tracking in Fitnet"}
           className="mx-auto h-72 w-auto max-w-full object-contain sm:h-80"
           loading="lazy"
         />
@@ -368,12 +481,12 @@ function WorkoutScreensPreview() {
   );
 }
 
-function StepSixCelebration() {
+function StepSixCelebration({ isArabic }: { isArabic: boolean }) {
   return (
     <div className="mt-7 overflow-hidden rounded-2xl border border-primary/20 bg-primary/10 p-2 shadow-[0_0_28px_rgba(0,191,107,0.12)]">
       <img
         src={stepSixCelebration}
-        alt="احتفال بعد الالتزام بالتحدي"
+        alt={isArabic ? "احتفال بعد الالتزام بالتحدي" : "Celebrating challenge consistency"}
         className="mx-auto w-full max-w-sm rounded-xl"
         loading="lazy"
       />
@@ -381,12 +494,12 @@ function StepSixCelebration() {
   );
 }
 
-function StepNineUrgency() {
+function StepNineUrgency({ isArabic }: { isArabic: boolean }) {
   return (
     <div className="mt-7 overflow-hidden rounded-2xl border border-primary/20 bg-primary/10 p-2 shadow-[0_0_28px_rgba(0,191,107,0.12)]">
       <img
         src={stepNineUrgency}
-        alt="الجولة تبدأ قريباً"
+        alt={isArabic ? "الجولة تبدأ قريباً" : "The next challenge round starts soon"}
         className="mx-auto w-full max-w-md rounded-xl"
         loading="lazy"
       />
@@ -394,20 +507,11 @@ function StepNineUrgency() {
   );
 }
 
-function StepTenValue() {
-  return (
-    <div className="mt-7 overflow-hidden rounded-2xl border border-primary/20 bg-primary/10 p-2 shadow-[0_0_28px_rgba(0,191,107,0.12)]">
-      <img
-        src={stepTenValue}
-        alt="قيمة الاشتراك في التحدي"
-        className="mx-auto w-full max-w-xs rounded-xl"
-        loading="lazy"
-      />
-    </div>
-  );
-}
-
 function PaymentSuccess() {
+  const { isArabic } = useLanguage();
+  const isFree =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("free") === "1";
   const [copied, setCopied] = useState(false);
   const [paymentSyncStatus, setPaymentSyncStatus] = useState<
     "idle" | "syncing" | "synced" | "failed"
@@ -419,6 +523,31 @@ function PaymentSuccess() {
     registrationId: string | null;
   } | null>(null);
   const challengeCode = "336699";
+  const successCopy = isArabic
+    ? {
+        status: isFree ? "تم التسجيل بنجاح" : "تم الدفع بنجاح",
+        title: "حياك في تحدي كوتش طارق على Fitnet",
+        intro: "مكانك صار محجوز… الحين باقي بس تدخل التطبيق وتجهّز للتحدي.",
+        warning: "تمت العملية، لكن احتجنا لحظة أطول لتحديث لوحة الإدارة.",
+        reserved: "تم تثبيت مكانك",
+        reassurance: "لا تشيل هم",
+        reassuranceBody:
+          "بنرسل لك نفس التفاصيل على الإيميل ورقم الواتساب اللي ضفتهم وقت التسجيل.",
+        ready: "جاهز؟ خلّنا نبدأ التحدي!",
+        joinCode: "كود الانضمام",
+      }
+    : {
+        status: isFree ? "Registration successful" : "Payment successful",
+        title: "Welcome to Coach Tarek's Challenge on Fitnet",
+        intro: "Your place is reserved. Open the app and get ready for the challenge.",
+        warning: "The operation succeeded, but the admin dashboard is taking longer to update.",
+        reserved: "Your place is reserved",
+        reassurance: "You are all set",
+        reassuranceBody:
+          "We will send the same details to the email and WhatsApp number you entered.",
+        ready: "Ready? Let’s start the challenge!",
+        joinCode: "Join code",
+      };
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -427,6 +556,17 @@ function PaymentSuccess() {
 
     if (!registrationId && !paymentIntentId) {
       window.location.replace("/registration-form");
+      return;
+    }
+
+    if (isFree && registrationId) {
+      setPaymentDetails({
+        transactionId: registrationId,
+        value: 0,
+        currency: fixedPaymentCurrency,
+        registrationId,
+      });
+      setPaymentSyncStatus("synced");
       return;
     }
 
@@ -492,7 +632,7 @@ function PaymentSuccess() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isFree]);
 
   const copyCode = async () => {
     try {
@@ -506,29 +646,29 @@ function PaymentSuccess() {
 
   const instructionCards = [
     {
-      number: "١",
-      title: "حمّل تطبيق Fitnet",
-      body: "نزّل التطبيق من المتجر المناسب لجهازك.",
+      number: isArabic ? "١" : "1",
+      title: isArabic ? "حمّل تطبيق Fitnet" : "Download the Fitnet app",
+      body: isArabic ? "نزّل التطبيق من المتجر المناسب لجهازك." : "Install the app from your device's app store.",
       type: "download",
     },
     {
-      number: "٢",
-      title: "سجّل كمتدرّب",
-      body: "افتح التطبيق وسجّل حساب جديد كـ متدرّب.",
+      number: isArabic ? "٢" : "2",
+      title: isArabic ? "سجّل كمتدرّب" : "Register as a trainee",
+      body: isArabic ? "افتح التطبيق وسجّل حساب جديد كـ متدرّب." : "Open the app and create a new trainee account.",
       image: registerTraineeScreenshot,
       alt: "شاشة تسجيل المتدرب في تطبيق Fitnet",
     },
     {
-      number: "٣",
-      title: "ادخل تحدي كوتش طارق",
-      body: "من داخل التطبيق، اختر تحدي كوتش طارق.",
+      number: isArabic ? "٣" : "3",
+      title: isArabic ? "ادخل تحدي كوتش طارق" : "Join Coach Tarek's challenge",
+      body: isArabic ? "من داخل التطبيق، اختر تحدي كوتش طارق." : "Select Coach Tarek's challenge inside the app.",
       image: selectChallengeScreenshot,
       alt: "شاشة اختيار تحدي كوتش طارق في تطبيق Fitnet",
     },
     {
-      number: "٤",
-      title: "أدخل كود التحدي",
-      body: "اكتب الكود التالي داخل نافذة الانضمام للتحدي.",
+      number: isArabic ? "٤" : "4",
+      title: isArabic ? "أدخل كود التحدي" : "Enter the challenge code",
+      body: isArabic ? "اكتب الكود التالي داخل نافذة الانضمام للتحدي." : "Use this code in the challenge join screen.",
       type: "code",
       image: enterCodeScreenshot,
       alt: "شاشة إدخال كود تحدي كوتش طارق في تطبيق Fitnet",
@@ -537,7 +677,7 @@ function PaymentSuccess() {
 
   return (
     <main
-      dir="rtl"
+      dir={isArabic ? "rtl" : "ltr"}
       className="min-h-screen overflow-hidden bg-background text-foreground selection:bg-primary selection:text-black"
     >
       <div className="absolute inset-0 overflow-hidden">
@@ -548,11 +688,14 @@ function PaymentSuccess() {
 
       <div className="relative z-10 mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
         <header className="flex items-center justify-between gap-3" dir="ltr">
-          <span className="inline-flex items-center gap-2 text-sm font-bold text-white/80">
+          <a
+            href="/"
+            className="inline-flex items-center gap-2 text-sm font-bold text-white/80 hover:text-primary"
+          >
             Tarek AlGhafeer
-          </span>
+          </a>
           <div className="rounded-full border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-extrabold text-primary">
-            تم تثبيت مكانك
+            {successCopy.reserved}
           </div>
         </header>
 
@@ -562,20 +705,19 @@ function PaymentSuccess() {
               <Check className="h-9 w-9" />
             </div>
             <div>
-              <p className="text-sm font-extrabold text-primary">تم الدفع بنجاح</p>
+              <p className="text-sm font-extrabold text-primary">{successCopy.status}</p>
               <h1 className="mt-2 text-balance text-4xl font-extrabold leading-tight text-white md:text-5xl">
-                حياك في تحدي كوتش طارق على Fitnet 🔥
+                {successCopy.title}
               </h1>
             </div>
           </div>
 
           <p className="mt-5 max-w-3xl text-xl font-semibold leading-relaxed text-white/75">
-            مكانك صار محجوز… الحين باقي بس تدخل التطبيق وتجهّز للتحدي.
+            {successCopy.intro}
           </p>
           {paymentSyncStatus === "failed" ? (
             <p className="mt-4 rounded-xl border border-yellow-400/25 bg-yellow-400/10 px-4 py-3 text-sm font-bold leading-relaxed text-yellow-100">
-              تم الدفع بنجاح، لكن احتجنا لحظة أطول لتحديث لوحة الإدارة. لو استمر
-              التنبيه، راح نثبّت الدفع من مزود الدفع.
+              {successCopy.warning}
             </p>
           ) : null}
           {paymentDetails ? (
@@ -618,7 +760,7 @@ function PaymentSuccess() {
               className="overflow-hidden rounded-2xl border border-white/10 bg-card/70 shadow-[0_22px_70px_rgba(0,0,0,0.22)]"
             >
               <div className="p-5">
-                <div className="flex items-center gap-3 text-right">
+                <div className={`flex items-center gap-3 ${isArabic ? "text-right" : "text-left"}`}>
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-black text-black">
                     {card.number}
                   </div>
@@ -636,10 +778,12 @@ function PaymentSuccess() {
                   <button
                     type="button"
                     onClick={copyCode}
-                    className="mt-4 flex w-full items-center justify-between gap-3 rounded-2xl border border-primary/35 bg-primary/10 p-4 text-right shadow-[0_0_24px_rgba(0,191,107,0.12)] transition active:scale-[0.98]"
+                    className={`mt-4 flex w-full items-center justify-between gap-3 rounded-2xl border border-primary/35 bg-primary/10 p-4 shadow-[0_0_24px_rgba(0,191,107,0.12)] transition active:scale-[0.98] ${
+                      isArabic ? "text-right" : "text-left"
+                    }`}
                   >
                     <span>
-                      <span className="block text-xs font-extrabold text-primary">كود الانضمام</span>
+                      <span className="block text-xs font-extrabold text-primary">{successCopy.joinCode}</span>
                       <span
                         dir="ltr"
                         className="mt-1 block text-3xl font-black tracking-[0.12em] text-white"
@@ -669,12 +813,12 @@ function PaymentSuccess() {
         </section>
 
         <section className="mt-5 rounded-2xl border border-white/10 bg-white/[0.04] p-5 text-center md:p-7">
-          <p className="text-2xl font-extrabold text-white">لا تشيل هم 👌</p>
+          <p className="text-2xl font-extrabold text-white">{successCopy.reassurance}</p>
           <p className="mx-auto mt-3 max-w-2xl text-base font-semibold leading-relaxed text-white/65">
-            بنرسل لك نفس التفاصيل على الإيميل ورقم الواتساب اللي ضفتهم وقت الدفع.
+            {successCopy.reassuranceBody}
           </p>
           <p className="mt-5 text-xl font-extrabold text-primary">
-            جاهز؟ خلّنا نبدأ التحدي!
+            {successCopy.ready}
           </p>
           <AppStoreBadges className="mt-5 justify-center" />
         </section>
@@ -684,12 +828,21 @@ function PaymentSuccess() {
 }
 
 function RegistrationFlow({ initialPaymentStatus }: { initialPaymentStatus: string | null }) {
+  const { isArabic, toggleLanguage, t } = useLanguage();
+  const steps = isArabic ? arabicSteps : englishSteps;
   const [stepIndex, setStepIndex] = useState(() => getSavedStepIndex(initialPaymentStatus));
   const [answers, setAnswers] = useState<Record<number, string[]>>({});
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
+  const [selectedPackageId, setSelectedPackageId] = useState<PackageId>(() => {
+    if (typeof window === "undefined") return "free";
+    const plan = new URLSearchParams(window.location.search).get("plan");
+    return isPackageId(plan) ? plan : "free";
+  });
   const [paymentError, setPaymentError] = useState<string | null>(() =>
     initialPaymentStatus === "failed"
-      ? "ما تمت عملية الدفع. جرّب مرة ثانية وثبّت مكانك قبل اكتمال العدد."
+      ? isArabic
+        ? "ما تمت عملية الدفع. جرّب مرة ثانية وثبّت مكانك قبل اكتمال العدد."
+        : "Payment was not completed. Please try again to reserve your place."
       : null,
   );
   const step = steps[stepIndex];
@@ -749,11 +902,6 @@ function RegistrationFlow({ initialPaymentStatus }: { initialPaymentStatus: stri
     if (!canContinue) return;
     trackFormStart();
     trackStepComplete(stepIndex);
-    if (stepIndex === steps.length - 1) {
-      setPaymentError(null);
-      setIsContactDialogOpen(true);
-      return;
-    }
     setStepIndex((current) => Math.min(current + 1, steps.length - 1));
   };
 
@@ -773,9 +921,16 @@ function RegistrationFlow({ initialPaymentStatus }: { initialPaymentStatus: stri
     });
   };
 
+  const selectPackage = (packageId: PackageId) => {
+    trackFormStart();
+    setSelectedPackageId(packageId);
+    setPaymentError(null);
+    setIsContactDialogOpen(true);
+  };
+
   return (
     <main
-      dir="rtl"
+      dir={isArabic ? "rtl" : "ltr"}
       className="min-h-screen overflow-hidden bg-background text-foreground selection:bg-primary selection:text-black"
     >
       <div className="absolute inset-0 overflow-hidden">
@@ -786,9 +941,21 @@ function RegistrationFlow({ initialPaymentStatus }: { initialPaymentStatus: stri
 
       <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 py-5 sm:px-6 lg:px-8">
         <header className="flex items-center justify-between gap-3" dir="ltr">
-          <span className="inline-flex items-center gap-2 text-sm font-bold text-white/80">
+          <a
+            href="/"
+            className="inline-flex items-center gap-2 text-sm font-bold text-white/80 hover:text-primary"
+          >
             Tarek AlGhafeer
-          </span>
+          </a>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={toggleLanguage}
+            className="h-10 gap-2 border-white/15 bg-black/30 px-3 text-white hover:bg-white/10 hover:text-white"
+          >
+            <Languages className="h-4 w-4" />
+            {t.toggleLabel}
+          </Button>
         </header>
 
         <div className="mt-6 grid gap-6 lg:items-center">
@@ -796,7 +963,7 @@ function RegistrationFlow({ initialPaymentStatus }: { initialPaymentStatus: stri
             <div className="mb-7">
               <div className="mb-3 flex items-center justify-between gap-4 text-xs font-bold text-white/60">
                 <span>
-                  الخطوة {stepIndex + 1} من {steps.length}
+                  {isArabic ? "الخطوة" : "Step"} {stepIndex + 1} {isArabic ? "من" : "of"} {steps.length}
                 </span>
                 <span>{Math.round(progress)}%</span>
               </div>
@@ -826,7 +993,7 @@ function RegistrationFlow({ initialPaymentStatus }: { initialPaymentStatus: stri
                   <div>
                     <p className="text-sm font-bold text-primary">{step.eyebrow}</p>
                     <p className="mt-1 text-xs font-semibold text-white/45">
-                      تحدي كوتش طارق على Fitnet
+                      {isArabic ? "تحدي كوتش طارق على Fitnet" : "Coach Tarek Challenge on Fitnet"}
                     </p>
                   </div>
                 </div>
@@ -843,11 +1010,19 @@ function RegistrationFlow({ initialPaymentStatus }: { initialPaymentStatus: stri
                   </div>
                 ) : null}
 
-                {stepIndex === 3 ? <FitnetScreensPreview /> : null}
-                {stepIndex === 4 ? <WorkoutScreensPreview /> : null}
-                {stepIndex === 5 ? <StepSixCelebration /> : null}
-                {stepIndex === 8 ? <StepNineUrgency /> : null}
-                {stepIndex === 9 ? <StepTenValue /> : null}
+                {stepIndex === 3 ? <FitnetScreensPreview isArabic={isArabic} /> : null}
+                {stepIndex === 4 ? <WorkoutScreensPreview isArabic={isArabic} /> : null}
+                {stepIndex === 5 ? <StepSixCelebration isArabic={isArabic} /> : null}
+                {stepIndex === 8 ? <StepNineUrgency isArabic={isArabic} /> : null}
+                {stepIndex === paymentStepIndex ? (
+                  <div className="mt-8">
+                    <PackagesTable
+                      isArabic={isArabic}
+                      onSelect={selectPackage}
+                      compact
+                    />
+                  </div>
+                ) : null}
 
                 {step.options ? (
                   <div className="mt-8 grid gap-3 sm:grid-cols-2">
@@ -858,7 +1033,9 @@ function RegistrationFlow({ initialPaymentStatus }: { initialPaymentStatus: stri
                           key={option}
                           type="button"
                           onClick={() => toggleAnswer(option)}
-                          className={`group flex min-h-16 items-center justify-between gap-3 rounded-xl border px-4 py-3 text-right text-base font-bold leading-relaxed transition ${
+                          className={`group flex min-h-16 items-center justify-between gap-3 rounded-xl border px-4 py-3 text-base font-bold leading-relaxed transition ${
+                            isArabic ? "text-right" : "text-left"
+                          } ${
                             isSelected
                               ? "border-primary bg-primary/15 text-white shadow-[0_0_26px_rgba(0,191,107,0.16)]"
                               : "border-white/10 bg-white/[0.03] text-white/75 hover:border-primary/40 hover:bg-primary/10 hover:text-white"
@@ -913,7 +1090,7 @@ function RegistrationFlow({ initialPaymentStatus }: { initialPaymentStatus: stri
                   </div>
                 ) : null}
 
-                {stepIndex === 0 ? <CompactResultsProof /> : null}
+                {stepIndex === 0 ? <CompactResultsProof isArabic={isArabic} /> : null}
 
                 {paymentError ? (
                   <div className="mt-6 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-base font-bold leading-relaxed text-red-100">
@@ -923,7 +1100,9 @@ function RegistrationFlow({ initialPaymentStatus }: { initialPaymentStatus: stri
               </motion.div>
             </AnimatePresence>
 
-            <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className={`mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:items-center ${
+              stepIndex === paymentStepIndex ? "sm:justify-start" : "sm:justify-between"
+            }`}>
               <Button
                 type="button"
                 variant="outline"
@@ -931,9 +1110,10 @@ function RegistrationFlow({ initialPaymentStatus }: { initialPaymentStatus: stri
                 disabled={stepIndex === 0}
                 className="h-12 border-white/15 bg-white/5 text-white hover:bg-white/10 hover:text-white disabled:opacity-30"
               >
-                رجوع
+                {isArabic ? "رجوع" : "Back"}
               </Button>
 
+              {stepIndex !== paymentStepIndex ? (
               <div className="flex flex-col items-stretch gap-2 sm:items-end">
                 <Button
                   type="button"
@@ -942,14 +1122,14 @@ function RegistrationFlow({ initialPaymentStatus }: { initialPaymentStatus: stri
                   className="h-14 bg-primary px-8 text-lg font-extrabold text-primary-foreground shadow-[0_0_28px_rgba(0,191,107,0.28)] hover:bg-primary/90 disabled:opacity-45"
                 >
                   {step.cta}
-                  <ArrowLeft className="mr-2 h-5 w-5" />
+                  {isArabic ? (
+                    <ArrowLeft className="mr-2 h-5 w-5" />
+                  ) : (
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  )}
                 </Button>
-                {stepIndex === paymentStepIndex ? (
-                  <p className="text-center text-xs font-bold text-white/45 sm:text-right">
-                    بعد الضغط سيتم نقلك لصفحة الدفع الآمنة.
-                  </p>
-                ) : null}
               </div>
+              ) : null}
             </div>
           </section>
 
@@ -958,6 +1138,8 @@ function RegistrationFlow({ initialPaymentStatus }: { initialPaymentStatus: stri
           open={isContactDialogOpen}
           onOpenChange={setIsContactDialogOpen}
           source="registration_form"
+          packageId={selectedPackageId}
+          isArabic={isArabic}
           onError={setPaymentError}
           onInteraction={trackFormStart}
         />

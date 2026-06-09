@@ -7,7 +7,11 @@ const translations = {
     dir: "rtl",
     toggleLabel: "EN",
     nav: {
-      join: "انضم للتحدي",
+      home: "الرئيسية",
+      benefits: "ليش تنضم؟",
+      packages: "باقات الاشتراك",
+      results: "النتائج",
+      join: "انضم مجاناً",
     },
     hero: {
       titlePrefix: "غيّر جسمك مع",
@@ -16,7 +20,7 @@ const translations = {
       prizeEmojis: "",
       subtitle:
         "تدريب أونلاين لمدة شهر: خطة تمرين، خطة تغذية، ومتابعة مع الكوتش ضمن التحدي",
-      cta: "اشترك بـ 149 درهم فقط",
+      cta: "انضم مجاناً",
       seats: "المقاعد محدودة",
     },
     benefits: {
@@ -71,7 +75,11 @@ const translations = {
     dir: "ltr",
     toggleLabel: "عربي",
     nav: {
-      join: "Join Challenge",
+      home: "Home",
+      benefits: "Why Join?",
+      packages: "Packages",
+      results: "Results",
+      join: "Join for FREE",
     },
     hero: {
       titlePrefix: "Transform Your Body With",
@@ -80,7 +88,7 @@ const translations = {
       prizeEmojis: "",
       subtitle:
         "One month of online coaching: a workout plan, nutrition plan, and coach follow-up as part of the challenge.",
-      cta: "JOIN FOR ONLY AED 149",
+      cta: "JOIN FOR FREE",
       seats: "Limited seats available",
     },
     benefits: {

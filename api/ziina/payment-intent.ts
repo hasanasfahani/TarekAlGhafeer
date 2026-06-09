@@ -56,16 +56,19 @@ export default async function handler(req: VercelLikeRequest, res: VercelLikeRes
       });
     }
 
-    const registrationBundle = await createPendingRegistration({
-      ...(req.body?.contact ?? req.body ?? {}),
-      coachSlug: req.body?.coachSlug || "coach-tarek",
-      challengeSlug: req.body?.challengeSlug || "coach-tarek-challenge",
-    });
+    const registrationBundle = await createPendingRegistration(
+      {
+        ...(req.body?.contact ?? req.body ?? {}),
+        coachSlug: req.body?.coachSlug || "coach-tarek",
+        challengeSlug: req.body?.challengeSlug || "coach-tarek-challenge",
+      },
+      req.body?.packageId,
+    );
 
     const origin = getOrigin(req);
-    const successUrl = `${origin}/registration-form/success?registration_id=${registrationBundle.registration.id}&payment_intent_id={PAYMENT_INTENT_ID}`;
-    const cancelUrl = `${origin}/registration-form/cancelled?registration_id=${registrationBundle.registration.id}&payment_intent_id={PAYMENT_INTENT_ID}`;
-    const failureUrl = `${origin}/registration-form/failed?registration_id=${registrationBundle.registration.id}&payment_intent_id={PAYMENT_INTENT_ID}`;
+    const successUrl = `${origin}/registration-success?registration_id=${registrationBundle.registration.id}&payment_intent_id={PAYMENT_INTENT_ID}`;
+    const cancelUrl = `${origin}/payment-cancelled?registration_id=${registrationBundle.registration.id}&payment_intent_id={PAYMENT_INTENT_ID}`;
+    const failureUrl = `${origin}/payment-failed?registration_id=${registrationBundle.registration.id}&payment_intent_id={PAYMENT_INTENT_ID}`;
 
     const ziinaResponse = await fetch(`${ziinaApiBaseUrl}/payment_intent`, {
       method: "POST",

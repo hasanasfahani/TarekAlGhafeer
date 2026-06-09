@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { challengePackages, type PackageId } from "@/lib/packages";
 
 declare global {
   interface Window {
@@ -18,13 +19,14 @@ declare global {
 }
 
 const paymentStepIndex = 9;
-const fixedPaymentValue = 149;
 const fixedPaymentCurrency = "AED";
 
 type PaymentCheckoutDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   source: "main_hero" | "registration_form";
+  packageId: PackageId;
+  isArabic: boolean;
   onError?: (message: string) => void;
   onInteraction?: () => void;
 };
@@ -34,7 +36,7 @@ function pushDataLayerEvent(payload: Record<string, unknown>) {
   window.dataLayer.push(payload);
 }
 
-function amountToValue(amount: unknown) {
+function amountToValue(amount: unknown, fallback: number) {
   const numericAmount =
     typeof amount === "number"
       ? amount
@@ -42,7 +44,7 @@ function amountToValue(amount: unknown) {
         ? Number(amount)
         : NaN;
 
-  if (!Number.isFinite(numericAmount)) return fixedPaymentValue;
+  if (!Number.isFinite(numericAmount)) return fallback;
   return numericAmount > 1000 ? numericAmount / 100 : numericAmount;
 }
 
@@ -50,6 +52,8 @@ export default function PaymentCheckoutDialog({
   open,
   onOpenChange,
   source,
+  packageId,
+  isArabic,
   onError,
   onInteraction,
 }: PaymentCheckoutDialogProps) {
@@ -67,6 +71,44 @@ export default function PaymentCheckoutDialog({
     /\S+@\S+\.\S+/.test(contactInfo.email.trim()) &&
     contactInfo.whatsapp.trim().length >= 7 &&
     contactConfirmed;
+  const selectedPackage = challengePackages[packageId];
+  const text = isArabic
+    ? {
+        invalid: "عبّي معلوماتك وتأكد إنها صحيحة قبل المتابعة.",
+        paymentError: "تعذر إنشاء رابط الدفع.",
+        freeError: "تعذر إكمال التسجيل المجاني.",
+        title: packageId === "free" ? "خلّينا نثبت تسجيلك المجاني" : "خلّينا نجهّز اشتراكك",
+        description:
+          packageId === "free"
+            ? "أضف بياناتك حتى نثبت مكانك ونرسل لك كود دخول التحدي."
+            : `أضف بياناتك للانتقال إلى دفع آمن بقيمة ${selectedPackage.price} درهم عبر Ziina.`,
+        name: "الاسم الكامل",
+        namePlaceholder: "مثال: طارق الغفير",
+        email: "الإيميل",
+        whatsapp: "رقم واتساب",
+        confirm: "أؤكد أن الاسم والإيميل ورقم الواتساب صحيحين.",
+        loading: packageId === "free" ? "جاري تثبيت تسجيلك..." : "جاري تجهيز الدفع...",
+        submit: packageId === "free" ? "تأكيد التسجيل المجاني" : "المتابعة للدفع",
+        back: "رجوع",
+      }
+    : {
+        invalid: "Please complete your information and confirm it is correct.",
+        paymentError: "Could not create the payment link.",
+        freeError: "Could not complete the free registration.",
+        title: packageId === "free" ? "Complete your free registration" : "Complete your registration",
+        description:
+          packageId === "free"
+            ? "Add your details to reserve your place and receive the challenge access code."
+            : `Add your details to continue to a secure AED ${selectedPackage.price} payment through Ziina.`,
+        name: "Full name",
+        namePlaceholder: "Example: Tarek Al Ghafeer",
+        email: "Email",
+        whatsapp: "WhatsApp number",
+        confirm: "I confirm that my name, email, and WhatsApp number are correct.",
+        loading: packageId === "free" ? "Confirming registration..." : "Preparing payment...",
+        submit: packageId === "free" ? "Confirm free registration" : "Continue to payment",
+        back: "Back",
+      };
 
   const trackInteraction = () => {
     onInteraction?.();
@@ -74,7 +116,7 @@ export default function PaymentCheckoutDialog({
 
   const startPayment = async () => {
     if (!contactFormIsValid) {
-      setContactError("عبّي معلوماتك وتأكد إنها صحيحة قبل المتابعة للدفع.");
+      setContactError(text.invalid);
       return;
     }
 
@@ -84,6 +126,9 @@ export default function PaymentCheckoutDialog({
       coach_name: "tarek_alghafeer",
       challenge_name: "tarek_alghafeer_challenge",
       cta_location: source,
+      package_id: packageId,
+      value: selectedPackage.price,
+      currency: selectedPackage.currency,
     });
     setPaymentLoading(true);
     setContactError(null);
@@ -98,7 +143,11 @@ export default function PaymentCheckoutDialog({
         }),
       );
 
-      const response = await fetch("/api/ziina/payment-intent", {
+      const response = await fetch(
+        packageId === "free"
+          ? "/api/registrations/free"
+          : "/api/ziina/payment-intent",
+        {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -109,13 +158,36 @@ export default function PaymentCheckoutDialog({
           },
           coachSlug: "coach-tarek",
           challengeSlug: "coach-tarek-challenge",
+          packageId,
         }),
-      });
+        },
+      );
 
       const data = await response.json().catch(() => null);
 
-      if (!response.ok || !data?.redirectUrl) {
-        throw new Error(data?.error || data?.message || "تعذر إنشاء رابط الدفع.");
+      if (!response.ok || (packageId !== "free" && !data?.redirectUrl)) {
+        throw new Error(
+          data?.error ||
+            data?.message ||
+            (packageId === "free" ? text.freeError : text.paymentError),
+        );
+      }
+
+      if (packageId === "free") {
+        pushDataLayerEvent({
+          event: "registration_complete",
+          coach_name: "tarek_alghafeer",
+          challenge_name: "tarek_alghafeer_challenge",
+          cta_location: source,
+          package_id: packageId,
+          value: 0,
+          currency: fixedPaymentCurrency,
+        });
+        window.localStorage.removeItem("registration-form-step");
+        window.location.href = `/registration-success?registration_id=${encodeURIComponent(
+          data.registrationId,
+        )}&free=1`;
+        return;
       }
 
       pushDataLayerEvent({
@@ -123,7 +195,8 @@ export default function PaymentCheckoutDialog({
         coach_name: "tarek_alghafeer",
         challenge_name: "tarek_alghafeer_challenge",
         cta_location: source,
-        value: amountToValue(data.amount),
+        package_id: packageId,
+        value: amountToValue(data.amount, selectedPackage.price),
         currency:
           typeof data.currencyCode === "string"
             ? data.currencyCode
@@ -136,7 +209,11 @@ export default function PaymentCheckoutDialog({
       window.location.href = data.redirectUrl;
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "تعذر إنشاء رابط الدفع.";
+        error instanceof Error
+          ? error.message
+          : packageId === "free"
+            ? text.freeError
+            : text.paymentError;
       setContactError(message);
       onError?.(message);
       setPaymentLoading(false);
@@ -146,22 +223,21 @@ export default function PaymentCheckoutDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        dir="rtl"
+        dir={isArabic ? "rtl" : "ltr"}
         className="max-h-[92vh] w-[calc(100vw-1.5rem)] overflow-y-auto rounded-3xl border-white/10 bg-[#0b0f0d] p-5 text-white shadow-[0_26px_90px_rgba(0,0,0,0.55)] sm:max-w-md sm:p-6"
       >
-        <DialogHeader className="space-y-3 text-right">
+        <DialogHeader className={`space-y-3 ${isArabic ? "text-right" : "text-left"}`}>
           <DialogTitle className="text-2xl font-extrabold text-white">
-            خلّينا نجهّز كود دخولك
+            {text.title}
           </DialogTitle>
           <DialogDescription className="text-base font-semibold leading-relaxed text-white/65">
-            أضف اسمك، إيميلك، ورقم الواتساب حتى نقدر نرسل لك كود دخول
-            التحدي وتفاصيل البداية بعد إتمام الدفع.
+            {text.description}
           </DialogDescription>
         </DialogHeader>
 
         <div className="mt-5 space-y-4">
           <label className="block space-y-2">
-            <span className="text-sm font-extrabold text-white/80">الاسم الكامل</span>
+            <span className="text-sm font-extrabold text-white/80">{text.name}</span>
             <Input
               value={contactInfo.name}
               onFocus={trackInteraction}
@@ -171,13 +247,13 @@ export default function PaymentCheckoutDialog({
                   name: event.target.value,
                 }))
               }
-              placeholder="مثال: طارق الغفير"
+              placeholder={text.namePlaceholder}
               className="h-14 rounded-2xl border-white/10 bg-white/[0.04] text-base font-bold text-white placeholder:text-white/30 focus-visible:ring-primary"
             />
           </label>
 
           <label className="block space-y-2">
-            <span className="text-sm font-extrabold text-white/80">الإيميل</span>
+            <span className="text-sm font-extrabold text-white/80">{text.email}</span>
             <Input
               type="email"
               value={contactInfo.email}
@@ -195,7 +271,7 @@ export default function PaymentCheckoutDialog({
           </label>
 
           <label className="block space-y-2">
-            <span className="text-sm font-extrabold text-white/80">رقم واتساب</span>
+            <span className="text-sm font-extrabold text-white/80">{text.whatsapp}</span>
             <Input
               type="tel"
               value={contactInfo.whatsapp}
@@ -222,8 +298,7 @@ export default function PaymentCheckoutDialog({
               className="mt-1 border-primary data-[state=checked]:bg-primary data-[state=checked]:text-black"
             />
             <span className="text-sm font-bold leading-relaxed text-white/80">
-              أؤكد أن الاسم والإيميل ورقم الواتساب صحيحين، حتى يوصلني كود
-              دخول التحدي بدون تأخير.
+              {text.confirm}
             </span>
           </label>
 
@@ -241,7 +316,7 @@ export default function PaymentCheckoutDialog({
             disabled={paymentLoading || !contactFormIsValid}
             className="h-14 rounded-2xl bg-primary text-lg font-extrabold text-primary-foreground shadow-[0_0_28px_rgba(0,191,107,0.26)] hover:bg-primary/90 disabled:opacity-45"
           >
-            {paymentLoading ? "جاري تجهيز الدفع..." : "متابعة للدفع"}
+            {paymentLoading ? text.loading : text.submit}
           </Button>
           <Button
             type="button"
@@ -250,7 +325,7 @@ export default function PaymentCheckoutDialog({
             disabled={paymentLoading}
             className="h-12 rounded-2xl border-white/10 bg-white/[0.03] text-white hover:bg-white/10 hover:text-white"
           >
-            رجوع
+            {text.back}
           </Button>
         </div>
       </DialogContent>

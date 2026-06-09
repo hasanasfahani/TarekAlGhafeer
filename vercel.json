@@ -3,9 +3,9 @@
   "outputDirectory": "dist/public",
   "redirects": [
     {
-      "source": "/",
-      "destination": "/registration-form",
-      "permanent": false
+      "source": "/main",
+      "destination": "/",
+      "permanent": true
     }
   ],
   "rewrites": [

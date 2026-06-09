@@ -31,7 +31,9 @@ export default function FinalCTA() {
 
         <div className="flex flex-col items-center gap-6 max-w-md mx-auto">
           <Button 
-            onClick={() => document.getElementById("hero")?.scrollIntoView({ behavior: "smooth" })}
+            onClick={() => {
+              window.location.href = "/registration-form";
+            }}
             className={`w-full h-16 text-xl font-bold bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-105 transition-transform shadow-[0_0_30px_rgba(0,191,107,0.4)] ${
               isArabic ? "" : "uppercase tracking-wider"
             }`}

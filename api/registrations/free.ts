@@ -1,7 +1,6 @@
-import { z } from "zod";
 import {
   canUseRegistrationsDatabase,
-  markRegistrationPaid,
+  createFreeRegistration,
   sendConfirmationEmailForRegistration,
 } from "../_lib/registrations.js";
 
@@ -21,8 +20,7 @@ type VercelLikeResponse = {
 function getOrigin(req: VercelLikeRequest) {
   const forwardedProto = req.headers["x-forwarded-proto"];
   const proto = Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto;
-  const host = req.headers.host;
-  return `${proto || "https"}://${host}`;
+  return `${proto || "https"}://${req.headers.host}`;
 }
 
 export default async function handler(req: VercelLikeRequest, res: VercelLikeResponse) {
@@ -38,36 +36,30 @@ export default async function handler(req: VercelLikeRequest, res: VercelLikeRes
       });
     }
 
-    const body = z
-      .object({
-        registrationId: z.string().optional().nullable(),
-        paymentIntentId: z.string().optional().nullable(),
-      })
-      .parse(req.body ?? {});
-
-    const registration = await markRegistrationPaid({
-      registrationId: body.registrationId,
-      paymentIntentId: body.paymentIntentId,
+    const registrationBundle = await createFreeRegistration({
+      ...(req.body?.contact ?? req.body ?? {}),
+      coachSlug: req.body?.coachSlug || "coach-tarek",
+      challengeSlug: req.body?.challengeSlug || "coach-tarek-challenge",
     });
 
-    if (!registration) {
-      return res.status(404).json({
-        message: "Registration not found.",
-      });
-    }
-
     const email = await sendConfirmationEmailForRegistration({
-      registrationId: registration?.id,
+      registrationId: registrationBundle.registration.id,
       origin: getOrigin(req),
     }).catch((error) => ({
       sent: false,
       error: error instanceof Error ? error.message : "Unknown email error",
     }));
 
-    return res.status(200).json({ registration, email });
+    return res.status(200).json({
+      registrationId: registrationBundle.registration.id,
+      status: registrationBundle.registration.status,
+      amount: registrationBundle.registration.amount,
+      currencyCode: registrationBundle.registration.currency,
+      email,
+    });
   } catch (error) {
     return res.status(500).json({
-      message: "Could not complete registration.",
+      message: "Could not create free registration.",
       error: error instanceof Error ? error.message : "Unknown error",
     });
   }

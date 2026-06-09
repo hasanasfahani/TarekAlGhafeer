@@ -7,6 +7,16 @@ const defaultChallengeAmount = 14900;
 const defaultChallengeCurrency = "AED";
 const defaultChallengeName = "Coach Tarek Challenge";
 const defaultChallengeEntryCode = "336699";
+const packageAmounts = {
+  "premium-single": 14900,
+  "premium-duo": 24900,
+} as const;
+
+type PaidPackageId = keyof typeof packageAmounts;
+
+function getPaidPackageId(input: unknown): PaidPackageId {
+  return input === "premium-duo" ? "premium-duo" : "premium-single";
+}
 
 declare global {
   // eslint-disable-next-line no-var
@@ -106,11 +116,15 @@ async function ensureDefaultChallenge() {
   return { coach, challenge: challengeResult.rows[0] };
 }
 
-export async function createPendingRegistration(contactInput: unknown) {
+export async function createPendingRegistration(
+  contactInput: unknown,
+  packageInput?: unknown,
+) {
   const contact = normalizeContact(contactInput);
   const pool = await getPool();
   const { coach, challenge } = await ensureDefaultChallenge();
   const operationId = randomUUID();
+  const packageId = getPaidPackageId(packageInput);
 
   const customerResult = await pool.query(
     `insert into customers (name, email, whatsapp)
@@ -123,17 +137,51 @@ export async function createPendingRegistration(contactInput: unknown) {
   const registrationResult = await pool.query(
     `insert into registrations (
       customer_id, coach_id, challenge_id, status, payment_provider,
-      operation_id, amount, currency
+      operation_id, amount, currency, raw_payment
     )
-    values ($1, $2, $3, 'pending', 'ziina', $4, $5, $6)
+    values ($1, $2, $3, 'pending', 'ziina', $4, $5, $6, $7)
     returning *`,
     [
       customer.id,
       coach.id,
       challenge.id,
       operationId,
-      challenge.price_amount,
+      packageAmounts[packageId],
       challenge.currency,
+      JSON.stringify({ packageId }),
+    ],
+  );
+
+  return { customer, coach, challenge, registration: registrationResult.rows[0] };
+}
+
+export async function createFreeRegistration(contactInput: unknown) {
+  const contact = normalizeContact(contactInput);
+  const pool = await getPool();
+  const { coach, challenge } = await ensureDefaultChallenge();
+
+  const customerResult = await pool.query(
+    `insert into customers (name, email, whatsapp)
+     values ($1, $2, $3)
+     returning *`,
+    [contact.name, contact.email, contact.whatsapp],
+  );
+
+  const customer = customerResult.rows[0];
+  const registrationResult = await pool.query(
+    `insert into registrations (
+      customer_id, coach_id, challenge_id, status, payment_provider,
+      operation_id, amount, currency, raw_payment, paid_at
+    )
+    values ($1, $2, $3, 'paid', 'free', $4, 0, $5, $6, now())
+    returning *`,
+    [
+      customer.id,
+      coach.id,
+      challenge.id,
+      randomUUID(),
+      challenge.currency,
+      JSON.stringify({ packageId: "free" }),
     ],
   );
 

@@ -1,30 +1,24 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Info } from "lucide-react";
 import { motion } from "framer-motion";
 import coachTarek from "@assets/optimized/coach-tarek-hero.webp";
 import { useLanguage } from "@/lib/i18n";
-import PaymentCheckoutDialog from "@/components/PaymentCheckoutDialog";
 
 export default function Hero() {
   const { t, isArabic } = useLanguage();
-  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-
-  const openPaymentCheckout = () => {
+  const openRegistrationForm = () => {
     window.dataLayer = window.dataLayer || [];
     window.dataLayer.push({
-      event: "hero_payment_cta_click",
+      event: "hero_registration_cta_click",
       coach_name: "tarek_alghafeer",
       challenge_name: "tarek_alghafeer_challenge",
-      value: 149,
-      currency: "AED",
       cta_location: "main_hero",
     });
-    setIsCheckoutOpen(true);
+    window.location.href = "/registration-form";
   };
 
   return (
-    <section id="hero" className="relative min-h-screen flex items-center overflow-hidden">
+    <section id="hero" className="scroll-mt-24 relative min-h-screen flex items-center overflow-hidden">
       {/* Background Image with Effects */}
       <div className="absolute inset-0 z-0">
         <img 
@@ -127,7 +121,7 @@ export default function Hero() {
             >
               <div className={`flex flex-col gap-4 ${isArabic ? "w-full items-end sm:max-w-[580px]" : "items-start"}`}>
                 <Button 
-                  onClick={openPaymentCheckout}
+                  onClick={openRegistrationForm}
                   data-testid="hero-payment-cta"
                   className={`h-14 bg-primary px-8 text-lg font-bold text-primary-foreground shadow-[0_0_20px_rgba(0,191,107,0.3)] transition-all hover:scale-105 hover:bg-primary/90 ${
                     isArabic ? "w-full self-end" : "w-full uppercase tracking-wider md:w-auto"
@@ -150,11 +144,6 @@ export default function Hero() {
           </div>
         </div>
       </div>
-      <PaymentCheckoutDialog
-        open={isCheckoutOpen}
-        onOpenChange={setIsCheckoutOpen}
-        source="main_hero"
-      />
     </section>
   );
 }

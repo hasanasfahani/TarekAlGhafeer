@@ -122,7 +122,7 @@ export default function Benefits() {
   ];
 
   return (
-    <section className="py-24 bg-background relative overflow-hidden">
+    <section id="benefits" className="scroll-mt-24 py-24 bg-background relative overflow-hidden">
       {/* Background Elements */}
       <div className="absolute top-1/4 left-0 w-[400px] h-[400px] bg-primary/5 rounded-full blur-[150px] -z-10" />
       <div className="absolute bottom-1/4 right-0 w-[400px] h-[400px] bg-secondary/5 rounded-full blur-[150px] -z-10" />

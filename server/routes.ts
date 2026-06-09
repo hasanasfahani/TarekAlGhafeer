@@ -9,6 +9,7 @@ import {
 import {
   attachPaymentIntentToRegistration,
   canUseRegistrationsDatabase,
+  createFreeRegistration,
   createPendingRegistration,
   getAdminSummary,
   listRegistrations,
@@ -80,16 +81,19 @@ export async function registerRoutes(
       });
     }
 
-    const registrationBundle = await createPendingRegistration({
-      ...(req.body?.contact ?? req.body ?? {}),
-      coachSlug: req.body?.coachSlug || "coach-tarek",
-      challengeSlug: req.body?.challengeSlug || "coach-tarek-challenge",
-    });
+    const registrationBundle = await createPendingRegistration(
+      {
+        ...(req.body?.contact ?? req.body ?? {}),
+        coachSlug: req.body?.coachSlug || "coach-tarek",
+        challengeSlug: req.body?.challengeSlug || "coach-tarek-challenge",
+      },
+      req.body?.packageId,
+    );
 
     const origin = `${req.protocol}://${req.get("host")}`;
-    const successUrl = `${origin}/registration-form/success?registration_id=${registrationBundle.registration.id}&payment_intent_id={PAYMENT_INTENT_ID}`;
-    const cancelUrl = `${origin}/registration-form/cancelled?registration_id=${registrationBundle.registration.id}&payment_intent_id={PAYMENT_INTENT_ID}`;
-    const failureUrl = `${origin}/registration-form/failed?registration_id=${registrationBundle.registration.id}&payment_intent_id={PAYMENT_INTENT_ID}`;
+    const successUrl = `${origin}/registration-success?registration_id=${registrationBundle.registration.id}&payment_intent_id={PAYMENT_INTENT_ID}`;
+    const cancelUrl = `${origin}/payment-cancelled?registration_id=${registrationBundle.registration.id}&payment_intent_id={PAYMENT_INTENT_ID}`;
+    const failureUrl = `${origin}/payment-failed?registration_id=${registrationBundle.registration.id}&payment_intent_id={PAYMENT_INTENT_ID}`;
 
     const ziinaResponse = await fetch(`${ziinaApiBaseUrl}/payment_intent`, {
       method: "POST",
@@ -133,6 +137,27 @@ export async function registerRoutes(
       currencyCode: data.currency_code,
       redirectUrl: data.redirect_url,
       embeddedUrl: data.embedded_url,
+    });
+  });
+
+  app.post("/api/registrations/free", async (req, res) => {
+    if (!canUseRegistrationsDatabase()) {
+      return res.status(500).json({
+        message: "Supabase database is not configured.",
+      });
+    }
+
+    const registrationBundle = await createFreeRegistration({
+      ...(req.body?.contact ?? req.body ?? {}),
+      coachSlug: req.body?.coachSlug || "coach-tarek",
+      challengeSlug: req.body?.challengeSlug || "coach-tarek-challenge",
+    });
+
+    return res.json({
+      registrationId: registrationBundle.registration.id,
+      status: registrationBundle.registration.status,
+      amount: registrationBundle.registration.amount,
+      currencyCode: registrationBundle.registration.currency,
     });
   });
 

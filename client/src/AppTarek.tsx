@@ -9,15 +9,23 @@ import RegistrationForm from "@/pages/RegistrationForm";
 import AdminPortal from "@/pages/AdminPortal";
 import { LanguageProvider } from "@/lib/i18n";
 
+function LegacyMainRedirect() {
+  window.location.replace("/");
+  return null;
+}
+
 function Router() {
   return (
     <Switch>
+      <Route path="/registration-success" component={RegistrationForm} />
+      <Route path="/payment-failed" component={RegistrationForm} />
+      <Route path="/payment-cancelled" component={RegistrationForm} />
       <Route path="/registration-form/success" component={RegistrationForm} />
       <Route path="/registration-form/failed" component={RegistrationForm} />
       <Route path="/registration-form/cancelled" component={RegistrationForm} />
       <Route path="/registration-form" component={RegistrationForm} />
       <Route path="/admin" component={AdminPortal} />
-      <Route path="/main" component={Home} />
+      <Route path="/main" component={LegacyMainRedirect} />
       <Route path="/" component={Home} />
       <Route component={NotFound} />
     </Switch>

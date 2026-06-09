@@ -3,8 +3,12 @@ import { Languages } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/lib/i18n";
 
+const sectionIds = ["hero", "benefits", "packages", "results"] as const;
+type SectionId = (typeof sectionIds)[number];
+
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
+  const [activeSection, setActiveSection] = useState<SectionId>("hero");
   const { t, toggleLanguage, isArabic } = useLanguage();
 
   useEffect(() => {
@@ -15,9 +19,77 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const scrollToHero = () => {
-    document.getElementById("hero")?.scrollIntoView({ behavior: "smooth" });
+  useEffect(() => {
+    const sections = sectionIds
+      .map((id) => document.getElementById(id))
+      .filter((section): section is HTMLElement => Boolean(section));
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+
+        if (visible && sectionIds.includes(visible.target.id as SectionId)) {
+          setActiveSection(visible.target.id as SectionId);
+        }
+      },
+      {
+        rootMargin: "-25% 0px -60% 0px",
+        threshold: [0, 0.1, 0.25, 0.5],
+      },
+    );
+
+    sections.forEach((section) => observer.observe(section));
+    return () => observer.disconnect();
+  }, []);
+
+  const navItems: Array<{ id: SectionId; label: string }> = [
+    { id: "hero", label: t.nav.home },
+    { id: "benefits", label: t.nav.benefits },
+    { id: "packages", label: t.nav.packages },
+    { id: "results", label: t.nav.results },
+  ];
+
+  const scrollToSection = (id: SectionId) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    window.history.replaceState({}, "", id === "hero" ? "/" : `/#${id}`);
+    setActiveSection(id);
   };
+
+  const openRegistrationForm = () => {
+    window.location.href = "/registration-form";
+  };
+
+  const SectionLinks = ({ mobile = false }: { mobile?: boolean }) => (
+    <div
+      className={
+        mobile
+          ? "flex min-w-max items-center gap-1 px-4"
+          : `flex items-center gap-1 ${isArabic ? "flex-row-reverse" : ""}`
+      }
+      dir={isArabic ? "rtl" : "ltr"}
+    >
+      {navItems.map((item) => {
+        const isActive = activeSection === item.id;
+        return (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => scrollToSection(item.id)}
+            aria-current={isActive ? "page" : undefined}
+            className={`rounded-full px-3 py-2 text-sm font-bold whitespace-nowrap transition ${
+              isActive
+                ? "bg-primary/15 text-primary"
+                : "text-white/60 hover:bg-white/[0.06] hover:text-white"
+            }`}
+          >
+            {item.label}
+          </button>
+        );
+      })}
+    </div>
+  );
 
   return (
     <nav
@@ -26,10 +98,14 @@ export default function Navbar() {
       }`}
     >
       <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-3" dir="ltr">
-        <div className="flex shrink-0 cursor-pointer items-center gap-2 text-left" onClick={scrollToHero}>
+        <a href="/" className="flex shrink-0 items-center gap-2 text-left">
           <span className="whitespace-nowrap font-heading text-xl font-bold tracking-tighter text-white md:text-2xl">
             Tarek AlGhafeer
           </span>
+        </a>
+
+        <div className="hidden lg:flex">
+          <SectionLinks />
         </div>
 
         <div className={`hidden md:flex items-center gap-3 ${isArabic ? "flex-row-reverse" : ""}`}>
@@ -50,7 +126,7 @@ export default function Navbar() {
             className={`bg-primary text-primary-foreground hover:bg-primary/90 font-bold ${
               isArabic ? "" : "uppercase tracking-wide"
             }`}
-            onClick={scrollToHero}
+            onClick={openRegistrationForm}
           >{t.nav.join}</Button>
         </div>
 
@@ -71,9 +147,13 @@ export default function Navbar() {
               className={`bg-primary text-primary-foreground font-bold text-xs ${
                 isArabic ? "" : "uppercase"
               }`}
-              onClick={scrollToHero}
+              onClick={openRegistrationForm}
             >{t.nav.join}</Button>
         </div>
+      </div>
+
+      <div className="overflow-x-auto border-t border-white/[0.06] bg-background/75 py-1 backdrop-blur-md [scrollbar-width:none] lg:hidden [&::-webkit-scrollbar]:hidden">
+        <SectionLinks mobile />
       </div>
     </nav>
   );

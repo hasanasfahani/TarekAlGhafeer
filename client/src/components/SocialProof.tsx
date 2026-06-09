@@ -67,7 +67,7 @@ export default function SocialProof() {
   const { t, isArabic } = useLanguage();
 
   return (
-    <section className="py-20 bg-black/50">
+    <section id="results" className="scroll-mt-24 py-20 bg-black/50">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <h2 className={`text-3xl md:text-5xl font-heading font-bold mb-4 ${isArabic ? "leading-tight" : "uppercase"}`}>
