@@ -1,20 +1,12 @@
 import { randomUUID } from "crypto";
 import { buildConfirmationEmail, sendResendEmail } from "./confirmationEmail.js";
+import {
+  getCoachConfigBySlug,
+  getPackageConfig,
+  type PackageId,
+} from "../../shared/coaches.js";
 
-const defaultCoachSlug = "coach-tarek";
-const defaultChallengeSlug = "coach-tarek-challenge";
-const defaultChallengeAmount = 14900;
-const defaultChallengeCurrency = "AED";
-const defaultChallengeName = "Coach Tarek Challenge";
-const defaultChallengeEntryCode = "336699";
-const packageAmounts = {
-  "premium-single": 14900,
-  "premium-duo": 24900,
-} as const;
-
-type PaidPackageId = keyof typeof packageAmounts;
-
-function getPaidPackageId(input: unknown): PaidPackageId {
+function getPaidPackageId(input: unknown): Exclude<PackageId, "free"> {
   return input === "premium-duo" ? "premium-duo" : "premium-single";
 }
 
@@ -54,7 +46,10 @@ async function ensureRegistrationEmailColumns() {
        add column if not exists confirmation_email_sent_at timestamptz,
        add column if not exists confirmation_email_status text,
        add column if not exists confirmation_email_error text,
-       add column if not exists confirmation_email_message_id text`,
+       add column if not exists confirmation_email_message_id text,
+       add column if not exists refund_id text,
+       add column if not exists refund_status text,
+       add column if not exists refunded_at timestamptz`,
   );
 }
 
@@ -70,12 +65,13 @@ function normalizeContact(input: any) {
   return { name, email, whatsapp };
 }
 
-async function ensureDefaultChallenge() {
+async function ensureChallenge(coachSlug?: string | null) {
   const pool = await getPool();
+  const config = getCoachConfigBySlug(coachSlug);
 
   let coachResult = await pool.query(
     "select * from coaches where slug = $1 limit 1",
-    [defaultCoachSlug],
+    [config.coachSlug],
   );
 
   if (coachResult.rowCount === 0) {
@@ -84,14 +80,14 @@ async function ensureDefaultChallenge() {
        values ($1, $2, 'active')
        on conflict (slug) do update set updated_at = now()
        returning *`,
-      ["Tarek AlGhafeer", defaultCoachSlug],
+      [config.name, config.coachSlug],
     );
   }
 
   const coach = coachResult.rows[0];
   let challengeResult = await pool.query(
     "select * from challenges where coach_id = $1 and slug = $2 limit 1",
-    [coach.id, defaultChallengeSlug],
+    [coach.id, config.challengeSlug],
   );
 
   if (challengeResult.rowCount === 0) {
@@ -104,11 +100,11 @@ async function ensureDefaultChallenge() {
       returning *`,
       [
         coach.id,
-        defaultChallengeName,
-        defaultChallengeSlug,
-        defaultChallengeAmount,
-        defaultChallengeCurrency,
-        defaultChallengeEntryCode,
+        config.challengeName,
+        config.challengeSlug,
+        config.packages["premium-single"].price * 100,
+        config.packages["premium-single"].currency,
+        null,
       ],
     );
   }
@@ -122,9 +118,11 @@ export async function createPendingRegistration(
 ) {
   const contact = normalizeContact(contactInput);
   const pool = await getPool();
-  const { coach, challenge } = await ensureDefaultChallenge();
-  const operationId = randomUUID();
+  const config = getCoachConfigBySlug((contactInput as any)?.coachSlug);
+  const { coach, challenge } = await ensureChallenge(config.coachSlug);
   const packageId = getPaidPackageId(packageInput);
+  const selectedPackage = getPackageConfig(config, packageId);
+  const operationId = randomUUID();
 
   const customerResult = await pool.query(
     `insert into customers (name, email, whatsapp)
@@ -146,9 +144,13 @@ export async function createPendingRegistration(
       coach.id,
       challenge.id,
       operationId,
-      packageAmounts[packageId],
+      selectedPackage.price * 100,
       challenge.currency,
-      JSON.stringify({ packageId }),
+      JSON.stringify({
+        packageId,
+        packageTrackingId: selectedPackage.trackingId,
+        packageName: selectedPackage.name,
+      }),
     ],
   );
 
@@ -158,7 +160,8 @@ export async function createPendingRegistration(
 export async function createFreeRegistration(contactInput: unknown) {
   const contact = normalizeContact(contactInput);
   const pool = await getPool();
-  const { coach, challenge } = await ensureDefaultChallenge();
+  const config = getCoachConfigBySlug((contactInput as any)?.coachSlug);
+  const { coach, challenge } = await ensureChallenge(config.coachSlug);
 
   const customerResult = await pool.query(
     `insert into customers (name, email, whatsapp)
@@ -181,7 +184,11 @@ export async function createFreeRegistration(contactInput: unknown) {
       challenge.id,
       randomUUID(),
       challenge.currency,
-      JSON.stringify({ packageId: "free" }),
+      JSON.stringify({
+        packageId: "free",
+        packageTrackingId: config.packages.free.trackingId,
+        packageName: config.packages.free.name,
+      }),
     ],
   );
 
@@ -200,7 +207,10 @@ export async function attachPaymentIntentToRegistration({
   const pool = await getPool();
   const result = await pool.query(
     `update registrations
-     set payment_intent_id = $2, raw_payment = $3, updated_at = now()
+     set payment_intent_id = $2,
+         raw_payment = coalesce(raw_payment, '{}'::jsonb)
+           || jsonb_build_object('provider', $3::jsonb),
+         updated_at = now()
      where id = $1
      returning *`,
     [registrationId, paymentIntentId, rawPayment ? JSON.stringify(rawPayment) : null],
@@ -228,7 +238,11 @@ export async function markRegistrationPaid({
         `update registrations
          set status = 'paid',
              payment_intent_id = coalesce($2, payment_intent_id),
-             raw_payment = coalesce($3, raw_payment),
+             raw_payment = coalesce(raw_payment, '{}'::jsonb)
+               || case
+                    when $3::jsonb is null then '{}'::jsonb
+                    else jsonb_build_object('provider', $3::jsonb)
+                  end,
              paid_at = coalesce(paid_at, now()),
              updated_at = now()
          where id = $1
@@ -238,7 +252,11 @@ export async function markRegistrationPaid({
     : await pool.query(
         `update registrations
          set status = 'paid',
-             raw_payment = coalesce($2, raw_payment),
+             raw_payment = coalesce(raw_payment, '{}'::jsonb)
+               || case
+                    when $2::jsonb is null then '{}'::jsonb
+                    else jsonb_build_object('provider', $2::jsonb)
+                  end,
              paid_at = coalesce(paid_at, now()),
              updated_at = now()
          where payment_intent_id = $1
@@ -260,9 +278,13 @@ async function getRegistrationConfirmationPayload(registrationId: string) {
        r.confirmation_email_sent_at,
        c.name as customer_name,
        c.email as customer_email,
-       ch.entry_code as challenge_entry_code
+       ch.entry_code as challenge_entry_code,
+       co.name as coach_name,
+       co.slug as coach_slug,
+       ch.name as challenge_name
      from registrations r
      join customers c on c.id = r.customer_id
+     join coaches co on co.id = r.coach_id
      join challenges ch on ch.id = r.challenge_id
      where r.id = $1
      limit 1`,
@@ -303,6 +325,8 @@ export async function sendConfirmationEmailForRegistration({
       to: payload.customer_email,
       customerName: payload.customer_name,
       entryCode: payload.challenge_entry_code,
+      coach: getCoachConfigBySlug(payload.coach_slug),
+      challengeName: payload.challenge_name,
       origin,
     });
     const result = await sendResendEmail({
@@ -340,26 +364,48 @@ export async function sendConfirmationEmailForRegistration({
 }
 
 export async function updateRegistrationStatus({
+  registrationId,
   paymentIntentId,
   status,
   rawPayment,
 }: {
+  registrationId?: string | null;
   paymentIntentId?: string | null;
   status: string;
   rawPayment?: unknown;
 }) {
-  if (!paymentIntentId) {
-    throw new Error("A payment intent id is required.");
+  if (!registrationId && !paymentIntentId) {
+    throw new Error("A registration id or payment intent id is required.");
   }
 
   const pool = await getPool();
-  const result = await pool.query(
-    `update registrations
-     set status = $2, raw_payment = coalesce($3, raw_payment), updated_at = now()
-     where payment_intent_id = $1
-     returning *`,
-    [paymentIntentId, status, rawPayment ? JSON.stringify(rawPayment) : null],
-  );
+  const result = registrationId
+    ? await pool.query(
+        `update registrations
+         set status = $2,
+             raw_payment = coalesce(raw_payment, '{}'::jsonb)
+               || case
+                    when $3::jsonb is null then '{}'::jsonb
+                    else jsonb_build_object('provider', $3::jsonb)
+                  end,
+             updated_at = now()
+         where id = $1
+         returning *`,
+        [registrationId, status, rawPayment ? JSON.stringify(rawPayment) : null],
+      )
+    : await pool.query(
+        `update registrations
+         set status = $2,
+             raw_payment = coalesce(raw_payment, '{}'::jsonb)
+               || case
+                    when $3::jsonb is null then '{}'::jsonb
+                    else jsonb_build_object('provider', $3::jsonb)
+                  end,
+             updated_at = now()
+         where payment_intent_id = $1
+         returning *`,
+        [paymentIntentId, status, rawPayment ? JSON.stringify(rawPayment) : null],
+      );
 
   return result.rows[0];
 }
@@ -379,6 +425,9 @@ export async function listRegistrations(status?: string) {
       r.payment_provider,
       r.payment_intent_id,
       r.operation_id,
+      r.refund_id,
+      r.refund_status,
+      r.refunded_at,
       r.paid_at,
       r.confirmation_email_sent_at,
       r.confirmation_email_status,
@@ -410,6 +459,9 @@ export async function listRegistrations(status?: string) {
     paymentProvider: row.payment_provider,
     paymentIntentId: row.payment_intent_id,
     operationId: row.operation_id,
+    refundId: row.refund_id,
+    refundStatus: row.refund_status,
+    refundedAt: row.refunded_at,
     paidAt: row.paid_at,
     confirmationEmailSentAt: row.confirmation_email_sent_at,
     confirmationEmailStatus: row.confirmation_email_status,
@@ -431,6 +483,49 @@ export async function listRegistrations(status?: string) {
       entryCode: row.challenge_entry_code,
     },
   }));
+}
+
+export async function getRegistrationForRefund(registrationId: string) {
+  const pool = await getPool();
+  await ensureRegistrationEmailColumns();
+  const result = await pool.query(
+    `select id, status, amount, currency, payment_intent_id, refund_id
+     from registrations
+     where id = $1
+     limit 1`,
+    [registrationId],
+  );
+  return result.rows[0] as Record<string, any> | undefined;
+}
+
+export async function recordRegistrationRefund({
+  registrationId,
+  refund,
+}: {
+  registrationId: string;
+  refund: Record<string, any>;
+}) {
+  const pool = await getPool();
+  await ensureRegistrationEmailColumns();
+  const completed = refund.status === "completed";
+  const result = await pool.query(
+    `update registrations
+     set status = $2,
+         refund_id = $3,
+         refund_status = $4,
+         refunded_at = case when $5 then coalesce(refunded_at, now()) else refunded_at end,
+         updated_at = now()
+     where id = $1
+     returning *`,
+    [
+      registrationId,
+      completed ? "refunded" : "refund_pending",
+      refund.id,
+      refund.status,
+      completed,
+    ],
+  );
+  return result.rows[0];
 }
 
 export async function getAdminSummary() {

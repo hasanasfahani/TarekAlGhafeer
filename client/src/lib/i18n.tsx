@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { useCoach } from "@/lib/coach";
 
 type Language = "ar" | "en";
 
@@ -14,9 +15,9 @@ const translations = {
       join: "انضم مجاناً",
     },
     hero: {
-      titlePrefix: "غيّر جسمك مع",
-      titleHighlight: "الكوتش طارق",
-      titleSuffix: "وارجع واثق بنفسك أكثر",
+      titlePrefix: "جاهز للتحدي مع",
+      titleHighlight: "كوتش طارق",
+      titleSuffix: "؟",
       prizeEmojis: "",
       subtitle:
         "تدريب أونلاين لمدة شهر: خطة تمرين، خطة تغذية، ومتابعة مع الكوتش ضمن التحدي",
@@ -82,9 +83,9 @@ const translations = {
       join: "Join for FREE",
     },
     hero: {
-      titlePrefix: "Transform Your Body With",
+      titlePrefix: "Ready for the challenge with",
       titleHighlight: "Coach Tarek",
-      titleSuffix: "AND FEEL CONFIDENT AGAIN",
+      titleSuffix: "?",
       prizeEmojis: "",
       subtitle:
         "One month of online coaching: a workout plan, nutrition plan, and coach follow-up as part of the challenge.",
@@ -153,26 +154,68 @@ interface LanguageContextValue {
 const LanguageContext = createContext<LanguageContextValue | undefined>(undefined);
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
+  const coach = useCoach();
   const [language, setLanguage] = useState<Language>(() => {
     if (typeof window === "undefined") return "ar";
     return window.localStorage.getItem("site-language") === "en" ? "en" : "ar";
   });
 
   const value = useMemo<LanguageContextValue>(() => {
-    const t = translations[language] as Translation;
+    const source = translations[language];
+    const replaceCoachName = (value: unknown): unknown => {
+      if (typeof value === "string") {
+        return value
+          .replaceAll("Coach Tarek", `Coach ${coach.firstName}`)
+          .replaceAll("الكوتش طارق", `الكوتش ${coach.arabicFirstName}`)
+          .replaceAll("كوتش طارق", `كوتش ${coach.arabicFirstName}`);
+      }
+      if (Array.isArray(value)) return value.map(replaceCoachName);
+      if (value && typeof value === "object") {
+        return Object.fromEntries(
+          Object.entries(value).map(([key, item]) => [key, replaceCoachName(item)]),
+        );
+      }
+      return value;
+    };
+    const t = replaceCoachName(source) as Translation;
     return {
       language,
       isArabic: language === "ar",
       t,
       toggleLanguage: () => setLanguage((current) => (current === "ar" ? "en" : "ar")),
     };
-  }, [language]);
+  }, [coach.arabicFirstName, coach.firstName, language]);
 
   useEffect(() => {
     document.documentElement.lang = language;
     document.documentElement.dir = value.t.dir;
     window.localStorage.setItem("site-language", language);
   }, [language, value.t.dir]);
+
+  useEffect(() => {
+    const seo = language === "ar"
+      ? { title: coach.seo.titleAr, description: coach.seo.descriptionAr }
+      : { title: coach.seo.title, description: coach.seo.description };
+    document.title = seo.title;
+    const canonicalUrl = `https://${coach.domain}${window.location.pathname}`;
+    const setMeta = (selector: string, attribute: string, value: string) => {
+      const element = document.querySelector(selector);
+      if (element) element.setAttribute(attribute, value);
+    };
+    setMeta('meta[name="description"]', "content", seo.description);
+    setMeta('meta[property="og:title"]', "content", seo.title);
+    setMeta('meta[property="og:description"]', "content", seo.description);
+    setMeta('meta[property="og:url"]', "content", canonicalUrl);
+    setMeta('meta[name="twitter:title"]', "content", seo.title);
+    setMeta('meta[name="twitter:description"]', "content", seo.description);
+    let canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.rel = "canonical";
+      document.head.appendChild(canonical);
+    }
+    canonical.href = canonicalUrl;
+  }, [coach, language]);
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }

@@ -4,9 +4,12 @@ import {
   canUseRegistrationsDatabase,
   createPendingRegistration,
 } from "../_lib/registrations.js";
+import {
+  getCoachConfigByHostname,
+  getCoachConfigBySlug,
+} from "../../shared/coaches.js";
 
 const ziinaApiBaseUrl = "https://api-v2.ziina.com/api";
-const challengeMessage = "Coach Tarek Challenge Registration";
 
 function shouldCreateTestPayment() {
   if (process.env.ZIINA_TEST_MODE) {
@@ -56,11 +59,15 @@ export default async function handler(req: VercelLikeRequest, res: VercelLikeRes
       });
     }
 
+    const requestHost = String(req.headers.host || "").split(":")[0];
+    const coachConfig = requestHost.endsWith(".fitnetapp.com")
+      ? getCoachConfigByHostname(requestHost)
+      : getCoachConfigBySlug(req.body?.coachSlug);
     const registrationBundle = await createPendingRegistration(
       {
         ...(req.body?.contact ?? req.body ?? {}),
-        coachSlug: req.body?.coachSlug || "coach-tarek",
-        challengeSlug: req.body?.challengeSlug || "coach-tarek-challenge",
+        coachSlug: coachConfig.coachSlug,
+        challengeSlug: coachConfig.challengeSlug,
       },
       req.body?.packageId,
     );
@@ -79,7 +86,7 @@ export default async function handler(req: VercelLikeRequest, res: VercelLikeRes
       body: JSON.stringify({
         amount: registrationBundle.registration.amount,
         currency_code: registrationBundle.registration.currency,
-        message: challengeMessage,
+        message: `${registrationBundle.challenge.name} Registration`,
         success_url: successUrl,
         cancel_url: cancelUrl,
         failure_url: failureUrl,

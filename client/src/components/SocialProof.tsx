@@ -1,5 +1,6 @@
 import { ArrowUpRight, Instagram, Users, Trophy } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
+import { useCoach } from "@/lib/coach";
 
 import transformation1 from "@assets/optimized/tarek-transformation-1.webp";
 import transformation2 from "@assets/optimized/tarek-transformation-2.webp";
@@ -64,6 +65,7 @@ const TransformationGallery = () => {
 };
 
 export default function SocialProof() {
+  const coach = useCoach();
   const { t, isArabic } = useLanguage();
 
   return (
@@ -81,7 +83,7 @@ export default function SocialProof() {
         </div>
 
         <a
-          href="https://www.instagram.com/tarekalghafeer/"
+          href={coach.instagramUrl}
           target="_blank"
           rel="noreferrer"
           aria-label={t.social.instagramAriaLabel}
@@ -98,7 +100,7 @@ export default function SocialProof() {
               dir="ltr"
               className="mt-0.5 block truncate text-xl font-bold text-white sm:text-2xl"
             >
-              @tarekalghafeer
+              {coach.instagramHandle}
             </span>
           </span>
           <ArrowUpRight

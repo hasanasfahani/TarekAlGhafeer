@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { randomUUID } from "crypto";
 import { z } from "zod";
 import {
   adminPasswordHeader,
@@ -12,13 +13,14 @@ import {
   createFreeRegistration,
   createPendingRegistration,
   getAdminSummary,
+  getRegistrationForRefund,
   listRegistrations,
   markRegistrationPaid,
+  recordRegistrationRefund,
   updateRegistrationStatus,
 } from "./registrationStore";
 
 const ziinaApiBaseUrl = "https://api-v2.ziina.com/api";
-const challengeMessage = "Coach Tarek Challenge Registration";
 
 function shouldCreateTestPayment() {
   if (process.env.ZIINA_TEST_MODE) {
@@ -104,7 +106,7 @@ export async function registerRoutes(
       body: JSON.stringify({
         amount: registrationBundle.registration.amount,
         currency_code: registrationBundle.registration.currency,
-        message: challengeMessage,
+        message: `${registrationBundle.challenge.name} Registration`,
         success_url: successUrl,
         cancel_url: cancelUrl,
         failure_url: failureUrl,
@@ -175,9 +177,25 @@ export async function registerRoutes(
       })
       .parse(req.body ?? {});
 
+    if (!body.paymentIntentId || !process.env.ZIINA_API_KEY) {
+      return res.status(400).json({
+        message: "A Ziina payment intent is required for payment confirmation.",
+      });
+    }
+    const ziinaResponse = await fetch(
+      `${ziinaApiBaseUrl}/payment_intent/${encodeURIComponent(body.paymentIntentId)}`,
+      { headers: { Authorization: `Bearer ${process.env.ZIINA_API_KEY}` } },
+    );
+    const payment = await ziinaResponse.json().catch(() => null);
+    if (!ziinaResponse.ok || payment?.status !== "completed") {
+      return res.status(409).json({
+        message: "Payment has not been confirmed by Ziina.",
+        status: payment?.status || null,
+      });
+    }
     const registration = await markRegistrationPaid({
-      registrationId: body.registrationId,
       paymentIntentId: body.paymentIntentId,
+      rawPayment: payment,
     });
 
     return res.json({ registration });
@@ -254,6 +272,61 @@ export async function registerRoutes(
 
     const summary = await getAdminSummary();
     return res.json({ summary });
+  });
+
+  app.post("/api/admin/registration-status", async (req, res) => {
+    if (!isAdminPasswordValid(req.get(adminPasswordHeader))) {
+      return res.status(401).json({ message: "Unauthorized." });
+    }
+    const allowedStatuses = new Set(["pending", "paid", "cancelled", "failed"]);
+    const registrationId = String(req.body?.registrationId || "");
+    const status = String(req.body?.status || "");
+    if (!registrationId || !allowedStatuses.has(status)) {
+      return res.status(400).json({ message: "Invalid registration status request." });
+    }
+    const registration = await updateRegistrationStatus({ registrationId, status });
+    return res.json({ registration });
+  });
+
+  app.post("/api/admin/refund", async (req, res) => {
+    if (!isAdminPasswordValid(req.get(adminPasswordHeader))) {
+      return res.status(401).json({ message: "Unauthorized." });
+    }
+    if (!process.env.ZIINA_API_KEY) {
+      return res.status(500).json({ message: "Ziina API key is not configured." });
+    }
+    const registrationId = String(req.body?.registrationId || "");
+    const registration = await getRegistrationForRefund(registrationId);
+    if (!registration) return res.status(404).json({ message: "Registration not found." });
+    if (registration.status !== "paid" || !registration.paymentIntentId) {
+      return res.status(409).json({ message: "Only paid Ziina registrations can be refunded." });
+    }
+    if (registration.refundId) {
+      return res.status(409).json({ message: "A refund already exists for this registration." });
+    }
+    const ziinaResponse = await fetch(`${ziinaApiBaseUrl}/refund`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.ZIINA_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        id: randomUUID(),
+        payment_intent_id: registration.paymentIntentId,
+        amount: registration.amount,
+        currency_code: registration.currency,
+        test: shouldCreateTestPayment(),
+      }),
+    });
+    const refund = await ziinaResponse.json().catch(() => null);
+    if (!ziinaResponse.ok) {
+      return res.status(ziinaResponse.status).json({
+        message: "Ziina could not create the refund.",
+        error: refund?.error?.message || refund?.message || refund?.error,
+      });
+    }
+    const updatedRegistration = await recordRegistrationRefund({ registrationId, refund });
+    return res.json({ refund, registration: updatedRegistration });
   });
 
   return httpServer;

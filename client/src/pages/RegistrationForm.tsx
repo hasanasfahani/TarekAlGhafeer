@@ -24,6 +24,8 @@ import PackagesTable from "@/components/PackagesTable";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/lib/i18n";
 import { isPackageId, type PackageId } from "@/lib/packages";
+import { getCoachConfigByHostname } from "@shared/coaches";
+import { pushDataLayerEvent as pushTrackedEvent } from "@/lib/tracking";
 import enterCodeScreenshot from "@assets/registration-success/enter-code.webp";
 import registerTraineeScreenshot from "@assets/registration-success/register-trainee.webp";
 import selectChallengeScreenshot from "@assets/registration-success/select-challenge.webp";
@@ -55,26 +57,24 @@ declare global {
   }
 }
 
-const coachName = "tarek_alghafeer";
-const challengeName = "tarek_alghafeer_challenge";
-const fixedPaymentValue = 149;
+const activeCoach = getCoachConfigByHostname(
+  typeof window === "undefined" ? undefined : window.location.hostname,
+);
+const fixedPaymentValue = activeCoach.packages["premium-single"].price;
 const fixedPaymentCurrency = "AED";
 
 type DataLayerPayload = Record<string, string | number | boolean | null | undefined>;
 
 function pushDataLayerEvent(payload: DataLayerPayload) {
   if (typeof window === "undefined") return;
-
-  window.dataLayer = window.dataLayer || [];
-  window.dataLayer.push(payload);
-  console.info("[dataLayer]", payload.event, payload);
+  const { event, package_id: packageId, ...parameters } = payload;
+  if (typeof event !== "string") return;
+  const resolvedPackageId = isPackageId(packageId) ? packageId : "premium-single";
+  pushTrackedEvent(event, resolvedPackageId, parameters);
 }
 
 function trackingBase() {
-  return {
-    coach_name: coachName,
-    challenge_name: challengeName,
-  };
+  return {};
 }
 
 function amountToValue(amount: unknown) {
@@ -166,7 +166,7 @@ const arabicSteps: Step[] = [
     ],
     response: [
       "تمام.",
-      "خلينا نثبت هالوعد بخطة واضحة وتحدي يبدأ بمنتصف الشهر.",
+      "خلينا نثبت هالوعد بخطة واضحة وتحدي يبدأ في 1 يوليو.",
     ],
     cta: "شو رح احصل بالتحدي؟",
     icon: Medal,
@@ -188,7 +188,7 @@ const arabicSteps: Step[] = [
   },
   {
     eyebrow: "الجولة قربت",
-    title: "التحدي يبدأ بمنتصف الشهر، والتسجيل يغلق قبل الانطلاق.",
+    title: "التحدي يبدأ في 1 يوليو، والتسجيل يغلق قبل الانطلاق.",
     lines: [
       "بعد بداية التحدي، ما في دخول لنفس الجولة حتى تكون المنافسة عادلة لكل المشاركين.",
     ],
@@ -280,7 +280,7 @@ const englishSteps: Step[] = [
     ],
     response: [
       "Perfect.",
-      "Let us support that promise with a clear plan and a challenge starting mid-month.",
+      "Let us support that promise with a clear plan and a challenge starting on July 1.",
     ],
     cta: "What will I get?",
     icon: Medal,
@@ -302,7 +302,7 @@ const englishSteps: Step[] = [
   },
   {
     eyebrow: "The round is close",
-    title: "The challenge starts mid-month, and registration closes before launch.",
+    title: "The challenge starts on July 1, and registration closes before launch.",
     lines: [
       "Once the challenge begins, entry closes for that round to keep the competition fair.",
     ],
@@ -378,13 +378,13 @@ function CompactResultsProof({ isArabic }: { isArabic: boolean }) {
           {isArabic ? "خبرة طويلة. نتائج حقيقية." : "Real experience. Real results."}
         </p>
         <a
-          href="https://www.instagram.com/tarekalghafeer/"
+          href={activeCoach.instagramUrl}
           target="_blank"
           rel="noreferrer"
           className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/10 bg-black/25 px-2.5 py-1.5 text-xs font-extrabold text-white/75 transition hover:border-primary/40 hover:text-primary active:scale-95"
         >
           <Instagram className="h-3.5 w-3.5 text-primary" />
-          <span dir="ltr">@tarekalghafeer</span>
+          <span dir="ltr">{activeCoach.instagramHandle}</span>
         </a>
       </div>
       <div className="grid grid-cols-2 gap-2">
@@ -509,9 +509,11 @@ function StepNineUrgency({ isArabic }: { isArabic: boolean }) {
 
 function PaymentSuccess() {
   const { isArabic } = useLanguage();
-  const isFree =
-    typeof window !== "undefined" &&
-    new URLSearchParams(window.location.search).get("free") === "1";
+  const [isFree] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get("free") === "1",
+  );
   const [copied, setCopied] = useState(false);
   const [paymentSyncStatus, setPaymentSyncStatus] = useState<
     "idle" | "syncing" | "synced" | "failed"
@@ -522,12 +524,12 @@ function PaymentSuccess() {
     currency: string;
     registrationId: string | null;
   } | null>(null);
-  const challengeCode = "336699";
+  const challengeCode = "";
   const successCopy = isArabic
     ? {
         status: isFree ? "تم التسجيل بنجاح" : "تم الدفع بنجاح",
-        title: "حياك في تحدي كوتش طارق على Fitnet",
-        intro: "مكانك صار محجوز… الحين باقي بس تدخل التطبيق وتجهّز للتحدي.",
+        title: `حياك في تحدي كوتش ${activeCoach.arabicFirstName} على Fitnet`,
+        intro: "مكانك صار محجوز… الحين باقي بس تدخل التطبيق وتجهّز للتحدي اللي يبدأ في 1 يوليو.",
         warning: "تمت العملية، لكن احتجنا لحظة أطول لتحديث لوحة الإدارة.",
         reserved: "تم تثبيت مكانك",
         reassurance: "لا تشيل هم",
@@ -538,8 +540,8 @@ function PaymentSuccess() {
       }
     : {
         status: isFree ? "Registration successful" : "Payment successful",
-        title: "Welcome to Coach Tarek's Challenge on Fitnet",
-        intro: "Your place is reserved. Open the app and get ready for the challenge.",
+        title: `Welcome to Coach ${activeCoach.firstName}'s Challenge on Fitnet`,
+        intro: "Your place is reserved. Open the app and get ready for the challenge starting July 1.",
         warning: "The operation succeeded, but the admin dashboard is taking longer to update.",
         reserved: "Your place is reserved",
         reassurance: "You are all set",
@@ -567,6 +569,7 @@ function PaymentSuccess() {
         registrationId,
       });
       setPaymentSyncStatus("synced");
+      window.history.replaceState({}, "", "/registration-success");
       return;
     }
 
@@ -612,18 +615,21 @@ function PaymentSuccess() {
         setPaymentSyncStatus("synced");
 
         if (transactionId) {
-          const trackingKey = `purchase_tracked_${transactionId}`;
-          if (!window.localStorage.getItem(trackingKey)) {
-            pushDataLayerEvent({
-              event: "payment_success",
-              ...trackingBase(),
-              transaction_id: transactionId,
-              value,
-              currency,
-            });
-            window.localStorage.setItem(trackingKey, "true");
-          }
+          pushDataLayerEvent({
+            event: "payment_success",
+            ...trackingBase(),
+            package_id:
+              registration.raw_payment?.packageId ||
+              registration.rawPayment?.packageId ||
+              "premium-single",
+            transaction_id: transactionId,
+            payment_method: "ziina",
+            payment_path: "online",
+            value,
+            currency,
+          });
         }
+        window.history.replaceState({}, "", "/registration-success");
       })
       .catch(() => {
         if (!cancelled) setPaymentSyncStatus("failed");
@@ -660,8 +666,8 @@ function PaymentSuccess() {
     },
     {
       number: isArabic ? "٣" : "3",
-      title: isArabic ? "ادخل تحدي كوتش طارق" : "Join Coach Tarek's challenge",
-      body: isArabic ? "من داخل التطبيق، اختر تحدي كوتش طارق." : "Select Coach Tarek's challenge inside the app.",
+      title: isArabic ? `ادخل تحدي كوتش ${activeCoach.arabicFirstName}` : `Join Coach ${activeCoach.firstName}'s challenge`,
+      body: isArabic ? `من داخل التطبيق، اختر تحدي كوتش ${activeCoach.arabicFirstName}.` : `Select Coach ${activeCoach.firstName}'s challenge inside the app.`,
       image: selectChallengeScreenshot,
       alt: "شاشة اختيار تحدي كوتش طارق في تطبيق Fitnet",
     },
@@ -692,7 +698,7 @@ function PaymentSuccess() {
             href="/"
             className="inline-flex items-center gap-2 text-sm font-bold text-white/80 hover:text-primary"
           >
-            Tarek AlGhafeer
+            {activeCoach.name}
           </a>
           <div className="rounded-full border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-extrabold text-primary">
             {successCopy.reserved}
@@ -754,7 +760,7 @@ function PaymentSuccess() {
         </section>
 
         <section className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {instructionCards.map((card) => (
+          {instructionCards.filter((card) => card.type !== "code" || challengeCode).map((card) => (
             <article
               key={card.title}
               className="overflow-hidden rounded-2xl border border-white/10 bg-card/70 shadow-[0_22px_70px_rgba(0,0,0,0.22)]"
@@ -829,7 +835,24 @@ function PaymentSuccess() {
 
 function RegistrationFlow({ initialPaymentStatus }: { initialPaymentStatus: string | null }) {
   const { isArabic, toggleLanguage, t } = useLanguage();
-  const steps = isArabic ? arabicSteps : englishSteps;
+  const steps = (isArabic ? arabicSteps : englishSteps).map((step) => {
+    const replace = (value: string) =>
+      value
+        .replaceAll("Coach Tarek", `Coach ${activeCoach.firstName}`)
+        .replaceAll("كوتش طارق", `كوتش ${activeCoach.arabicFirstName}`)
+        .replaceAll("الكوتش طارق", `الكوتش ${activeCoach.arabicFirstName}`);
+    return {
+      ...step,
+      eyebrow: replace(step.eyebrow),
+      title: replace(step.title),
+      lines: step.lines?.map(replace),
+      proof: step.proof ? replace(step.proof) : undefined,
+      cta: replace(step.cta),
+      options: step.options?.map(replace),
+      response: step.response?.map(replace),
+      bullets: step.bullets?.map(replace),
+    };
+  });
   const [stepIndex, setStepIndex] = useState(() => getSavedStepIndex(initialPaymentStatus));
   const [answers, setAnswers] = useState<Record<number, string[]>>({});
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
@@ -851,12 +874,13 @@ function RegistrationFlow({ initialPaymentStatus }: { initialPaymentStatus: stri
   const canContinue = !step.options || selected.length > 0;
   const StepIcon = step.icon;
   const formStartTrackedRef = useRef(false);
+  const completedStepsRef = useRef(new Set<number>());
 
   const trackFormStart = () => {
     if (formStartTrackedRef.current) return;
     formStartTrackedRef.current = true;
 
-    const trackingKey = "registration_form_start_tracked";
+    const trackingKey = `registration_form_start_tracked_${activeCoach.id}`;
     if (window.sessionStorage.getItem(trackingKey)) return;
 
     pushDataLayerEvent({
@@ -867,6 +891,9 @@ function RegistrationFlow({ initialPaymentStatus }: { initialPaymentStatus: stri
   };
 
   const trackStepComplete = (completedStepIndex: number) => {
+    if (completedStepsRef.current.has(completedStepIndex)) return;
+    completedStepsRef.current.add(completedStepIndex);
+
     pushDataLayerEvent({
       event: "registration_form_step_complete",
       ...trackingBase(),
@@ -892,6 +919,9 @@ function RegistrationFlow({ initialPaymentStatus }: { initialPaymentStatus: stri
       pushDataLayerEvent({
         event: "payment_failed",
         ...trackingBase(),
+        package_id: selectedPackageId,
+        payment_method: "ziina",
+        payment_path: "online",
         failure_reason: initialPaymentStatus,
       });
       window.history.replaceState({}, "", "/registration-form");
@@ -945,7 +975,7 @@ function RegistrationFlow({ initialPaymentStatus }: { initialPaymentStatus: stri
             href="/"
             className="inline-flex items-center gap-2 text-sm font-bold text-white/80 hover:text-primary"
           >
-            Tarek AlGhafeer
+            {activeCoach.name}
           </a>
           <Button
             type="button"
@@ -993,7 +1023,9 @@ function RegistrationFlow({ initialPaymentStatus }: { initialPaymentStatus: stri
                   <div>
                     <p className="text-sm font-bold text-primary">{step.eyebrow}</p>
                     <p className="mt-1 text-xs font-semibold text-white/45">
-                      {isArabic ? "تحدي كوتش طارق على Fitnet" : "Coach Tarek Challenge on Fitnet"}
+                      {isArabic
+                        ? `تحدي كوتش ${activeCoach.arabicFirstName} على Fitnet`
+                        : `Coach ${activeCoach.firstName} Challenge on Fitnet`}
                     </p>
                   </div>
                 </div>

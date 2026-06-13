@@ -3,16 +3,16 @@ import { Info } from "lucide-react";
 import { motion } from "framer-motion";
 import coachTarek from "@assets/optimized/coach-tarek-hero.webp";
 import { useLanguage } from "@/lib/i18n";
+import { useCoach } from "@/lib/coach";
+import { pushDataLayerEvent } from "@/lib/tracking";
 
 export default function Hero() {
+  const coach = useCoach();
   const { t, isArabic } = useLanguage();
   const openRegistrationForm = () => {
-    window.dataLayer = window.dataLayer || [];
-    window.dataLayer.push({
-      event: "hero_registration_cta_click",
-      coach_name: "tarek_alghafeer",
-      challenge_name: "tarek_alghafeer_challenge",
+    pushDataLayerEvent("registration_form_start", "premium-single", {
       cta_location: "main_hero",
+      page_type: "homepage",
     });
     window.location.href = "/registration-form";
   };
@@ -23,7 +23,7 @@ export default function Hero() {
       <div className="absolute inset-0 z-0">
         <img 
           src={coachTarek} 
-          alt="Coach Tarek Al Ghafeer" 
+          alt={`Coach ${coach.name}`}
           className="absolute inset-0 w-full h-full object-cover object-top"
           loading="eager"
           decoding="async"

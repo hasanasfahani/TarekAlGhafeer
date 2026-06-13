@@ -1,14 +1,23 @@
 const appDownloadUrl = "https://fitnetinfluencers.onelink.me/sLYI/hasanasfahani";
 const whatsappHelpUrl =
-  "https://wa.me/9647513855361?text=%D8%B3%D8%AC%D9%84%D8%AA%20%D8%A8%D8%AA%D8%AD%D8%AF%D9%8A%20%D8%A7%D9%84%D9%83%D9%88%D8%AA%D8%B4%20%D8%B7%D8%A7%D8%B1%D9%82%20%D9%88%D8%A3%D8%AD%D8%AA%D8%A7%D8%AC%20%D9%85%D8%B3%D8%A7%D8%B9%D8%AF%D8%A9";
-const emailSubject =
-  "تأكيد عملية الاشتراك في تحدي الكوتش طارق على تطبيق فتنت مع تعليمات الاشتراك";
+  "https://wa.me/9647513855361";
+
+type EmailCoach = {
+  name: string;
+  firstName: string;
+  arabicFirstName: string;
+  instagramUrl: string;
+  instagramHandle: string;
+  domain: string;
+};
 
 type ConfirmationEmailInput = {
   to: string;
   customerName?: string | null;
   entryCode?: string | null;
   origin?: string;
+  coach: EmailCoach;
+  challengeName?: string | null;
 };
 
 function getPublicOrigin(origin?: string) {
@@ -32,22 +41,24 @@ function escapeHtml(value: string) {
 
 export function buildConfirmationEmail({
   customerName,
-  entryCode = "336699",
+  entryCode,
   origin,
+  coach,
 }: ConfirmationEmailInput) {
   const publicOrigin = getPublicOrigin(origin);
   const safeName = customerName ? escapeHtml(customerName) : "";
-  const safeCode = escapeHtml(entryCode || "336699");
+  const safeCode = entryCode ? escapeHtml(entryCode) : "";
+  const emailSubject = `تأكيد الاشتراك في تحدي كوتش ${coach.arabicFirstName} على تطبيق Fitnet`;
 
   const html = `<!doctype html>
 <html lang="ar" dir="rtl">
   <body style="margin:0;background:#050605;font-family:Arial,Tahoma,sans-serif;color:#ffffff;">
     <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
-      تم تأكيد اشتراكك في تحدي كوتش طارق. حمّل التطبيق، سجّل كمتدرّب، واستخدم كود الدخول ${safeCode}.
+      تم تأكيد اشتراكك في تحدي كوتش ${coach.arabicFirstName}. حمّل التطبيق وسجّل كمتدرّب.
     </div>
     <div style="max-width:640px;margin:0 auto;padding:24px 14px;background:#050605;">
       <div style="padding:0 4px 14px;text-align:left;" dir="ltr">
-        <a href="https://www.instagram.com/tarekalghafeer/" style="display:inline-block;padding:8px 12px;border:1px solid rgba(255,255,255,0.10);border-radius:999px;background:rgba(0,0,0,0.25);color:rgba(255,255,255,0.78);font-size:13px;font-weight:900;text-decoration:none;">Instagram @tarekalghafeer</a>
+        <a href="${coach.instagramUrl}" style="display:inline-block;padding:8px 12px;border:1px solid rgba(255,255,255,0.10);border-radius:999px;background:rgba(0,0,0,0.25);color:rgba(255,255,255,0.78);font-size:13px;font-weight:900;text-decoration:none;">Instagram ${coach.instagramHandle}</a>
         <span style="display:inline-block;margin-left:10px;padding:8px 12px;border:1px solid rgba(11,216,120,0.28);border-radius:999px;background:rgba(11,216,120,0.10);color:#0bd878;font-size:12px;font-weight:900;">تم تثبيت مكانك</span>
       </div>
 
@@ -60,12 +71,12 @@ export function buildConfirmationEmail({
               </td>
               <td valign="top" style="text-align:right;">
                 <p style="margin:0;color:#0bd878;font-size:14px;font-weight:900;">تم الدفع بنجاح</p>
-                <h1 style="margin:8px 0 0;color:#ffffff;font-size:30px;line-height:1.35;font-weight:900;">حياك في تحدي كوتش طارق على Fitnet 🔥</h1>
+                <h1 style="margin:8px 0 0;color:#ffffff;font-size:30px;line-height:1.35;font-weight:900;">حياك في تحدي كوتش ${coach.arabicFirstName} على Fitnet</h1>
               </td>
             </tr>
           </table>
           <p style="margin:18px 0 0;color:rgba(255,255,255,0.74);font-size:18px;line-height:1.8;font-weight:700;">
-            ${safeName ? `${safeName}، ` : ""}مكانك صار محجوز… الحين باقي بس تدخل التطبيق وتجهّز للتحدي.
+            ${safeName ? `${safeName}، ` : ""}مكانك صار محجوز… الحين باقي بس تدخل التطبيق وتجهّز للتحدي. التحدي يبدأ في 1 يوليو.
           </p>
         </div>
 
@@ -85,19 +96,19 @@ export function buildConfirmationEmail({
           })}
           ${instructionCard({
             number: "3",
-            title: "ادخل تحدي كوتش طارق",
-            body: "من داخل التطبيق، اختر تحدي كوتش طارق.",
+            title: `ادخل تحدي كوتش ${coach.arabicFirstName}`,
+            body: `من داخل التطبيق، اختر تحدي كوتش ${coach.arabicFirstName}.`,
             imageUrl: getImageUrl(publicOrigin, "select-challenge.webp"),
             imageAlt: "شاشة اختيار تحدي كوتش طارق في تطبيق Fitnet",
           })}
-          ${instructionCard({
+          ${safeCode ? instructionCard({
             number: "4",
             title: "أدخل كود التحدي",
             body: "اكتب الكود التالي داخل نافذة الانضمام للتحدي.",
             inner: codeBlock(safeCode),
             imageUrl: getImageUrl(publicOrigin, "enter-code.webp"),
-            imageAlt: "شاشة إدخال كود تحدي كوتش طارق في تطبيق Fitnet",
-          })}
+            imageAlt: "شاشة إدخال كود التحدي في تطبيق Fitnet",
+          }) : ""}
 
           <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.10);border-radius:22px;padding:20px;text-align:center;">
             <p style="margin:0 0 14px;color:rgba(255,255,255,0.70);font-size:15px;line-height:1.8;font-weight:700;">إذا احتجت مساعدة، تواصل معنا على واتساب.</p>
@@ -113,8 +124,8 @@ export function buildConfirmationEmail({
 
   const text = `تم الدفع بنجاح
 
-حياك في تحدي كوتش طارق على Fitnet 🔥
-${safeName ? `${safeName}، ` : ""}مكانك صار محجوز… الحين باقي بس تدخل التطبيق وتجهّز للتحدي.
+حياك في تحدي كوتش ${coach.arabicFirstName} على Fitnet
+${safeName ? `${safeName}، ` : ""}مكانك صار محجوز… الحين باقي بس تدخل التطبيق وتجهّز للتحدي. التحدي يبدأ في 1 يوليو.
 
 1. حمّل تطبيق Fitnet:
 ${appDownloadUrl}
@@ -122,11 +133,10 @@ ${appDownloadUrl}
 2. سجّل كمتدرّب
 افتح التطبيق وسجّل حساب جديد كـ متدرّب.
 
-3. ادخل تحدي كوتش طارق
-من داخل التطبيق، اختر تحدي كوتش طارق.
+3. ادخل تحدي كوتش ${coach.arabicFirstName}
+من داخل التطبيق، اختر تحدي كوتش ${coach.arabicFirstName}.
 
-4. أدخل كود التحدي:
-${safeCode}
+${safeCode ? `4. أدخل كود التحدي:\n${safeCode}` : ""}
 
 إذا احتجت مساعدة، تواصل معنا على واتساب:
 ${whatsappHelpUrl}

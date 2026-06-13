@@ -5,6 +5,7 @@ import {
   Download,
   Lock,
   RefreshCw,
+  RotateCcw,
   Search,
   ShieldCheck,
   Users,
@@ -22,6 +23,9 @@ type RegistrationRecord = {
   paymentProvider: string;
   paymentIntentId: string | null;
   operationId: string;
+  refundId?: string | null;
+  refundStatus?: string | null;
+  refundedAt?: string | null;
   paidAt: string | null;
   createdAt: string;
   customer: {
@@ -123,19 +127,21 @@ export default function AdminPortal() {
   const [loginPassword, setLoginPassword] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(Boolean(password));
   const [statusFilter, setStatusFilter] = useState("paid");
+  const [coachFilter, setCoachFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [registrations, setRegistrations] = useState<RegistrationRecord[]>([]);
   const [summary, setSummary] = useState<AdminSummary | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const filteredRegistrations = useMemo(() => {
     const query = search.trim().toLowerCase();
-    if (!query) return registrations;
-
-    return registrations.filter((registration) =>
-      [
+    return registrations.filter((registration) => {
+      if (coachFilter !== "all" && registration.coach.slug !== coachFilter) return false;
+      if (!query) return true;
+      return [
         registration.customer.name,
         registration.customer.email,
         registration.customer.whatsapp,
@@ -148,9 +154,17 @@ export default function AdminPortal() {
       ]
         .join(" ")
         .toLowerCase()
-        .includes(query),
-    );
-  }, [registrations, search]);
+        .includes(query);
+    });
+  }, [coachFilter, registrations, search]);
+
+  const coachOptions = useMemo(
+    () =>
+      Array.from(
+        new Map(registrations.map((item) => [item.coach.slug, item.coach])).values(),
+      ),
+    [registrations],
+  );
 
   const fetchAdminData = async (adminPassword = password) => {
     if (!adminPassword) return;
@@ -239,6 +253,56 @@ export default function AdminPortal() {
     await navigator.clipboard.writeText(value);
     setCopiedId(`${label}:${value}`);
     window.setTimeout(() => setCopiedId(null), 1600);
+  };
+
+  const updateStatus = async (registrationId: string, status: string) => {
+    setUpdatingId(registrationId);
+    setError(null);
+    try {
+      const response = await fetch("/api/admin/registration-status", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-password": password,
+        },
+        body: JSON.stringify({ registrationId, status }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(data?.error || data?.message || "Update failed.");
+      await fetchAdminData();
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : "Update failed.");
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const refundRegistration = async (registration: RegistrationRecord) => {
+    if (
+      registration.status === "paid" &&
+      !window.confirm(`Refund ${formatMoney(registration.amount, registration.currency)} to this customer?`)
+    ) {
+      return;
+    }
+    setUpdatingId(registration.id);
+    setError(null);
+    try {
+      const response = await fetch("/api/admin/refund", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-password": password,
+        },
+        body: JSON.stringify({ registrationId: registration.id }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(data?.error || data?.message || "Refund failed.");
+      await fetchAdminData();
+    } catch (refundError) {
+      setError(refundError instanceof Error ? refundError.message : "Refund failed.");
+    } finally {
+      setUpdatingId(null);
+    }
   };
 
   if (!isAuthenticated) {
@@ -353,7 +417,18 @@ export default function AdminPortal() {
               />
             </div>
             <div className="flex flex-wrap gap-2">
-              {["paid", "pending", "all"].map((status) => (
+              <select
+                value={coachFilter}
+                onChange={(event) => setCoachFilter(event.target.value)}
+                className="h-10 rounded-full border border-white/10 bg-[#111512] px-4 text-sm font-extrabold text-white"
+                aria-label="Filter by coach"
+              >
+                <option value="all">All coaches</option>
+                {coachOptions.map((coach) => (
+                  <option key={coach.slug} value={coach.slug}>{coach.name}</option>
+                ))}
+              </select>
+              {["paid", "pending", "refunded", "all"].map((status) => (
                 <button
                   key={status}
                   type="button"
@@ -397,6 +472,7 @@ export default function AdminPortal() {
                   <th className="px-4 py-3">Amount</th>
                   <th className="px-4 py-3">Paid At</th>
                   <th className="px-4 py-3">IDs</th>
+                  <th className="px-4 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/10">
@@ -451,6 +527,55 @@ export default function AdminPortal() {
                           copied={copiedId === `PAY:${registration.paymentIntentId}`}
                           onCopy={() => copyValue("PAY", registration.paymentIntentId)}
                         />
+                        {registration.refundId ? (
+                          <IdCopyRow
+                            label="REF"
+                            value={registration.refundId}
+                            copied={copiedId === `REF:${registration.refundId}`}
+                            onCopy={() => copyValue("REF", registration.refundId || null)}
+                          />
+                        ) : null}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="grid min-w-40 gap-2">
+                        <select
+                          value={registration.status}
+                          disabled={updatingId === registration.id || registration.status === "refunded"}
+                          onChange={(event) => updateStatus(registration.id, event.target.value)}
+                          className="h-9 rounded-lg border border-white/10 bg-[#111512] px-2 text-xs font-bold text-white"
+                          aria-label={`Change status for ${registration.customer.name}`}
+                        >
+                          {["pending", "paid", "cancelled", "failed", "refund_pending", "refunded"].map((status) => (
+                            <option key={status} value={status} disabled={status.startsWith("refund")}>
+                              {status}
+                            </option>
+                          ))}
+                        </select>
+                        {registration.status === "paid" && registration.paymentProvider === "ziina" ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            disabled={updatingId === registration.id}
+                            onClick={() => refundRegistration(registration)}
+                            className="h-9 border-red-400/25 bg-red-500/10 text-xs font-extrabold text-red-100 hover:bg-red-500/20 hover:text-white"
+                          >
+                            <RotateCcw className="mr-2 h-3.5 w-3.5" />
+                            Full refund
+                          </Button>
+                        ) : null}
+                        {registration.status === "refund_pending" ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            disabled={updatingId === registration.id}
+                            onClick={() => refundRegistration(registration)}
+                            className="h-9 border-yellow-400/25 bg-yellow-500/10 text-xs font-extrabold text-yellow-100 hover:bg-yellow-500/20 hover:text-white"
+                          >
+                            <RefreshCw className="mr-2 h-3.5 w-3.5" />
+                            Refresh refund
+                          </Button>
+                        ) : null}
                       </div>
                     </td>
                   </tr>

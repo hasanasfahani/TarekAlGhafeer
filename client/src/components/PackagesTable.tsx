@@ -2,10 +2,12 @@ import { Check, Minus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
-  challengePackages,
+  getChallengePackages,
   getSyriaWhatsappUrl,
   type PackageId,
 } from "@/lib/packages";
+import { useCoach } from "@/lib/coach";
+import { pushDataLayerEvent } from "@/lib/tracking";
 
 type PackagesTableProps = {
   isArabic: boolean;
@@ -113,12 +115,58 @@ function FeatureValue({
   return <span className="text-xs font-extrabold text-white/80 sm:text-sm">{value}</span>;
 }
 
+function PackagePrice({
+  packageInfo,
+  fallback,
+  isArabic,
+  compact = false,
+}: {
+  packageInfo: ReturnType<typeof getChallengePackages>[PackageId];
+  fallback: string;
+  isArabic: boolean;
+  compact?: boolean;
+}) {
+  if (packageInfo.price === 0) {
+    return <span>{fallback}</span>;
+  }
+
+  return (
+    <span className="flex flex-col items-start">
+      {packageInfo.originalPrice ? (
+        <span
+          className={`font-bold text-white/45 line-through decoration-2 ${
+            compact ? "text-sm" : "text-xs"
+          }`}
+        >
+          {isArabic
+            ? `${packageInfo.originalPrice} درهم`
+            : `AED ${packageInfo.originalPrice}`}
+        </span>
+      ) : null}
+      <span>
+        {isArabic ? `${packageInfo.price} درهم` : `AED ${packageInfo.price}`}
+      </span>
+    </span>
+  );
+}
+
 export default function PackagesTable({
   isArabic,
   onSelect,
   compact = false,
 }: PackagesTableProps) {
+  const coach = useCoach();
+  const challengePackages = getChallengePackages(coach);
   const t = isArabic ? copy.ar : copy.en;
+  const localizedTitle = isArabic
+    ? `باقات تحدي الكوتش ${coach.arabicFirstName}`
+    : `Coach ${coach.firstName} Challenge Packages`;
+  const localizedFeatures = t.features.map((feature) => ({
+    ...feature,
+    label: feature.label
+      .replaceAll("Tarek", coach.firstName)
+      .replaceAll("طارق", coach.arabicFirstName),
+  }));
 
   return (
     <div dir={isArabic ? "rtl" : "ltr"}>
@@ -126,7 +174,7 @@ export default function PackagesTable({
         <div className="mb-10 text-center">
           <p className="text-sm font-extrabold text-primary">{t.eyebrow}</p>
           <h2 className="mt-3 text-4xl font-extrabold text-white md:text-5xl">
-            {t.title}
+            {localizedTitle}
           </h2>
           {t.subtitle ? (
             <p className="mx-auto mt-3 max-w-2xl text-base font-semibold leading-relaxed text-white/60">
@@ -141,8 +189,16 @@ export default function PackagesTable({
           const packageIndex = packageOrder.indexOf(packageId);
           const item = t.packages[packageId];
           const packageInfo = challengePackages[packageId];
-          const whatsappUrl = getSyriaWhatsappUrl(packageId);
+          const whatsappUrl = getSyriaWhatsappUrl(coach, packageId);
           const isFeatured = packageId === "premium-single";
+          const trackSyriaPayment = () => {
+            pushDataLayerEvent("payment_started", packageId, {
+              cta_location: "pricing_section",
+              page_type: compact ? "registration_form" : "home_page",
+              payment_method: "whatsapp_manual",
+              payment_path: "syria",
+            });
+          };
 
           return (
             <article
@@ -160,7 +216,14 @@ export default function PackagesTable({
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-xl font-extrabold text-white">{item.name}</p>
-                  <p className="mt-2 text-3xl font-black text-primary">{item.price}</p>
+                  <p className="mt-2 text-3xl font-black text-primary">
+                    <PackagePrice
+                      packageInfo={packageInfo}
+                      fallback={item.price}
+                      isArabic={isArabic}
+                      compact
+                    />
+                  </p>
                 </div>
                 {item.badge ? (
                   <span
@@ -178,7 +241,7 @@ export default function PackagesTable({
               <div className="my-5 h-px bg-white/10" />
 
               <ul className="grid gap-3">
-                {t.features.map((feature) => {
+                {localizedFeatures.map((feature) => {
                   const value = feature.values[packageIndex];
                   const isUnavailable = value === "no";
                   return (
@@ -210,6 +273,7 @@ export default function PackagesTable({
                     href={whatsappUrl}
                     target="_blank"
                     rel="noreferrer"
+                    onClick={trackSyriaPayment}
                     className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/15 bg-white/[0.04] px-4 py-3 text-center text-sm font-extrabold text-white transition hover:border-primary/40 hover:bg-primary/10"
                   >
                     {t.syriaCta}
@@ -243,14 +307,20 @@ export default function PackagesTable({
                       </span>
                     ) : null}
                     <p className="text-base font-extrabold text-white">{item.name}</p>
-                    <p className="mt-1 text-xl font-black text-primary">{item.price}</p>
+                    <div className="mt-1 flex justify-center text-xl font-black text-primary">
+                      <PackagePrice
+                        packageInfo={challengePackages[packageId]}
+                        fallback={item.price}
+                        isArabic={isArabic}
+                      />
+                    </div>
                   </th>
                 );
               })}
             </tr>
           </thead>
           <tbody>
-            {t.features.map((feature) => (
+            {localizedFeatures.map((feature) => (
               <tr key={feature.label} className="border-b border-white/[0.07] last:border-0">
                 <th className="bg-black/15 p-4 text-start text-sm font-bold text-white/75">
                   {feature.label}
@@ -271,7 +341,15 @@ export default function PackagesTable({
               <td className="bg-black/15 p-4" />
               {packageOrder.map((packageId) => {
                 const packageInfo = challengePackages[packageId];
-                const whatsappUrl = getSyriaWhatsappUrl(packageId);
+                const whatsappUrl = getSyriaWhatsappUrl(coach, packageId);
+                const trackSyriaPayment = () => {
+                  pushDataLayerEvent("payment_started", packageId, {
+                    cta_location: "pricing_section",
+                    page_type: compact ? "registration_form" : "home_page",
+                    payment_method: "whatsapp_manual",
+                    payment_path: "syria",
+                  });
+                };
                 return (
                   <td
                     key={packageId}
@@ -292,6 +370,7 @@ export default function PackagesTable({
                           href={whatsappUrl}
                           target="_blank"
                           rel="noreferrer"
+                          onClick={trackSyriaPayment}
                           className="inline-flex min-h-11 items-center justify-center rounded-lg border border-white/15 bg-white/[0.04] px-3 py-2 text-center text-xs font-extrabold text-white transition hover:border-primary/40 hover:bg-primary/10"
                         >
                           {t.syriaCta}

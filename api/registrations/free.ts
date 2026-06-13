@@ -3,6 +3,10 @@ import {
   createFreeRegistration,
   sendConfirmationEmailForRegistration,
 } from "../_lib/registrations.js";
+import {
+  getCoachConfigByHostname,
+  getCoachConfigBySlug,
+} from "../../shared/coaches.js";
 
 type VercelLikeRequest = {
   method?: string;
@@ -36,10 +40,14 @@ export default async function handler(req: VercelLikeRequest, res: VercelLikeRes
       });
     }
 
+    const requestHost = String(req.headers.host || "").split(":")[0];
+    const coachConfig = requestHost.endsWith(".fitnetapp.com")
+      ? getCoachConfigByHostname(requestHost)
+      : getCoachConfigBySlug(req.body?.coachSlug);
     const registrationBundle = await createFreeRegistration({
       ...(req.body?.contact ?? req.body ?? {}),
-      coachSlug: req.body?.coachSlug || "coach-tarek",
-      challengeSlug: req.body?.challengeSlug || "coach-tarek-challenge",
+      coachSlug: coachConfig.coachSlug,
+      challengeSlug: coachConfig.challengeSlug,
     });
 
     const email = await sendConfirmationEmailForRegistration({

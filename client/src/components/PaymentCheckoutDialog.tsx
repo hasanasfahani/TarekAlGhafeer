@@ -10,13 +10,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { challengePackages, type PackageId } from "@/lib/packages";
-
-declare global {
-  interface Window {
-    dataLayer?: Record<string, unknown>[];
-  }
-}
+import { getChallengePackages, type PackageId } from "@/lib/packages";
+import { useCoach } from "@/lib/coach";
+import { pushDataLayerEvent } from "@/lib/tracking";
 
 const paymentStepIndex = 9;
 const fixedPaymentCurrency = "AED";
@@ -24,17 +20,12 @@ const fixedPaymentCurrency = "AED";
 type PaymentCheckoutDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  source: "main_hero" | "registration_form";
+  source: "main_hero" | "pricing_section" | "registration_form";
   packageId: PackageId;
   isArabic: boolean;
   onError?: (message: string) => void;
   onInteraction?: () => void;
 };
-
-function pushDataLayerEvent(payload: Record<string, unknown>) {
-  window.dataLayer = window.dataLayer || [];
-  window.dataLayer.push(payload);
-}
 
 function amountToValue(amount: unknown, fallback: number) {
   const numericAmount =
@@ -57,6 +48,7 @@ export default function PaymentCheckoutDialog({
   onError,
   onInteraction,
 }: PaymentCheckoutDialogProps) {
+  const coach = useCoach();
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [contactConfirmed, setContactConfirmed] = useState(false);
   const [contactError, setContactError] = useState<string | null>(null);
@@ -71,7 +63,8 @@ export default function PaymentCheckoutDialog({
     /\S+@\S+\.\S+/.test(contactInfo.email.trim()) &&
     contactInfo.whatsapp.trim().length >= 7 &&
     contactConfirmed;
-  const selectedPackage = challengePackages[packageId];
+  const selectedPackage = getChallengePackages(coach)[packageId];
+  const pageType = source === "registration_form" ? "registration_form" : "home_page";
   const text = isArabic
     ? {
         invalid: "عبّي معلوماتك وتأكد إنها صحيحة قبل المتابعة.",
@@ -83,7 +76,7 @@ export default function PaymentCheckoutDialog({
             ? "أضف بياناتك حتى نثبت مكانك ونرسل لك كود دخول التحدي."
             : `أضف بياناتك للانتقال إلى دفع آمن بقيمة ${selectedPackage.price} درهم عبر Ziina.`,
         name: "الاسم الكامل",
-        namePlaceholder: "مثال: طارق الغفير",
+        namePlaceholder: `مثال: ${coach.arabicFirstName}`,
         email: "الإيميل",
         whatsapp: "رقم واتساب",
         confirm: "أؤكد أن الاسم والإيميل ورقم الواتساب صحيحين.",
@@ -101,7 +94,7 @@ export default function PaymentCheckoutDialog({
             ? "Add your details to reserve your place and receive the challenge access code."
             : `Add your details to continue to a secure AED ${selectedPackage.price} payment through Ziina.`,
         name: "Full name",
-        namePlaceholder: "Example: Tarek Al Ghafeer",
+        namePlaceholder: `Example: ${coach.name}`,
         email: "Email",
         whatsapp: "WhatsApp number",
         confirm: "I confirm that my name, email, and WhatsApp number are correct.",
@@ -121,14 +114,11 @@ export default function PaymentCheckoutDialog({
     }
 
     trackInteraction();
-    pushDataLayerEvent({
-      event: "registration_form_submit",
-      coach_name: "tarek_alghafeer",
-      challenge_name: "tarek_alghafeer_challenge",
+    pushDataLayerEvent("registration_form_submit", packageId, {
       cta_location: source,
-      package_id: packageId,
-      value: selectedPackage.price,
-      currency: selectedPackage.currency,
+      page_type: pageType,
+      payment_method: packageId === "free" ? "free" : "ziina",
+      payment_path: packageId === "free" ? "free" : "online",
     });
     setPaymentLoading(true);
     setContactError(null);
@@ -156,8 +146,8 @@ export default function PaymentCheckoutDialog({
             email: contactInfo.email.trim(),
             whatsapp: contactInfo.whatsapp.trim(),
           },
-          coachSlug: "coach-tarek",
-          challengeSlug: "coach-tarek-challenge",
+          coachSlug: coach.coachSlug,
+          challengeSlug: coach.challengeSlug,
           packageId,
         }),
         },
@@ -174,15 +164,6 @@ export default function PaymentCheckoutDialog({
       }
 
       if (packageId === "free") {
-        pushDataLayerEvent({
-          event: "registration_complete",
-          coach_name: "tarek_alghafeer",
-          challenge_name: "tarek_alghafeer_challenge",
-          cta_location: source,
-          package_id: packageId,
-          value: 0,
-          currency: fixedPaymentCurrency,
-        });
         window.localStorage.removeItem("registration-form-step");
         window.location.href = `/registration-success?registration_id=${encodeURIComponent(
           data.registrationId,
@@ -190,12 +171,11 @@ export default function PaymentCheckoutDialog({
         return;
       }
 
-      pushDataLayerEvent({
-        event: "payment_started",
-        coach_name: "tarek_alghafeer",
-        challenge_name: "tarek_alghafeer_challenge",
+      pushDataLayerEvent("payment_started", packageId, {
         cta_location: source,
-        package_id: packageId,
+        page_type: pageType,
+        payment_method: "ziina",
+        payment_path: "online",
         value: amountToValue(data.amount, selectedPackage.price),
         currency:
           typeof data.currencyCode === "string"

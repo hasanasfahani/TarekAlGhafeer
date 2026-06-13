@@ -9,6 +9,11 @@ import {
   type RegistrationContact,
 } from "@shared/schema";
 import { getDb, hasDatabaseConfig } from "./db";
+import {
+  getCoachConfigBySlug,
+  getPackageConfig,
+  type PackageId,
+} from "@shared/coaches";
 
 export const defaultCoachSlug = "coach-tarek";
 export const defaultChallengeSlug = "coach-tarek-challenge";
@@ -16,15 +21,16 @@ export const defaultChallengeAmount = 14900;
 export const defaultChallengeCurrency = "AED";
 export const defaultChallengeName = "Coach Tarek Challenge";
 export const defaultChallengeEntryCode = "336699";
-const packageAmounts = {
-  "premium-single": 14900,
-  "premium-duo": 24900,
-} as const;
-
-type PaidPackageId = keyof typeof packageAmounts;
-
-function getPaidPackageId(input: unknown): PaidPackageId {
+function getPaidPackageId(input: unknown): Exclude<PackageId, "free"> {
   return input === "premium-duo" ? "premium-duo" : "premium-single";
+}
+
+function mergeProviderPayment(existing: unknown, provider: unknown) {
+  const metadata =
+    existing && typeof existing === "object"
+      ? existing as Record<string, unknown>
+      : {};
+  return provider === undefined ? metadata : { ...metadata, provider };
 }
 
 export type RegistrationRecord = {
@@ -35,6 +41,9 @@ export type RegistrationRecord = {
   paymentProvider: string;
   paymentIntentId: string | null;
   operationId: string;
+  refundId: string | null;
+  refundStatus: string | null;
+  refundedAt: Date | null;
   paidAt: Date | null;
   createdAt: Date;
   customer: {
@@ -61,13 +70,14 @@ export function canUseRegistrationsDatabase() {
   return hasDatabaseConfig();
 }
 
-export async function ensureDefaultChallenge() {
+export async function ensureChallenge(coachSlug?: string | null) {
   const db = getDb();
+  const config = getCoachConfigBySlug(coachSlug);
 
   const [existingCoach] = await db
     .select()
     .from(coaches)
-    .where(eq(coaches.slug, defaultCoachSlug))
+    .where(eq(coaches.slug, config.coachSlug))
     .limit(1);
 
   const [coach] =
@@ -76,8 +86,8 @@ export async function ensureDefaultChallenge() {
       : await db
           .insert(coaches)
           .values({
-            name: "Tarek AlGhafeer",
-            slug: defaultCoachSlug,
+            name: config.name,
+            slug: config.coachSlug,
             status: "active",
           })
           .returning();
@@ -88,7 +98,7 @@ export async function ensureDefaultChallenge() {
     .where(
       and(
         eq(challenges.coachId, coach.id),
-        eq(challenges.slug, defaultChallengeSlug),
+        eq(challenges.slug, config.challengeSlug),
       ),
     )
     .limit(1);
@@ -101,11 +111,11 @@ export async function ensureDefaultChallenge() {
     .insert(challenges)
     .values({
       coachId: coach.id,
-      name: defaultChallengeName,
-      slug: defaultChallengeSlug,
-      priceAmount: defaultChallengeAmount,
-      currency: defaultChallengeCurrency,
-      entryCode: defaultChallengeEntryCode,
+      name: config.challengeName,
+      slug: config.challengeSlug,
+      priceAmount: config.packages["premium-single"].price * 100,
+      currency: config.packages["premium-single"].currency,
+      entryCode: null,
       status: "active",
     })
     .returning();
@@ -119,8 +129,10 @@ export async function createPendingRegistration(
 ) {
   const contact = normalizeContact(contactInput);
   const db = getDb();
-  const { coach, challenge } = await ensureDefaultChallenge();
+  const config = getCoachConfigBySlug(contact.coachSlug);
+  const { coach, challenge } = await ensureChallenge(config.coachSlug);
   const packageId = getPaidPackageId(packageInput);
+  const selectedPackage = getPackageConfig(config, packageId);
 
   const [customer] = await db
     .insert(customers)
@@ -141,9 +153,13 @@ export async function createPendingRegistration(
       status: "pending",
       paymentProvider: "ziina",
       operationId,
-      amount: packageAmounts[packageId],
+      amount: selectedPackage.price * 100,
       currency: challenge.currency,
-      rawPayment: { packageId },
+      rawPayment: {
+        packageId,
+        packageTrackingId: selectedPackage.trackingId,
+        packageName: selectedPackage.name,
+      },
     })
     .returning();
 
@@ -153,7 +169,8 @@ export async function createPendingRegistration(
 export async function createFreeRegistration(contactInput: unknown) {
   const contact = normalizeContact(contactInput);
   const db = getDb();
-  const { coach, challenge } = await ensureDefaultChallenge();
+  const config = getCoachConfigBySlug(contact.coachSlug);
+  const { coach, challenge } = await ensureChallenge(config.coachSlug);
 
   const [customer] = await db
     .insert(customers)
@@ -175,7 +192,11 @@ export async function createFreeRegistration(contactInput: unknown) {
       operationId: randomUUID(),
       amount: 0,
       currency: challenge.currency,
-      rawPayment: { packageId: "free" },
+      rawPayment: {
+        packageId: "free",
+        packageTrackingId: config.packages.free.trackingId,
+        packageName: config.packages.free.name,
+      },
       paidAt: new Date(),
     })
     .returning();
@@ -193,11 +214,16 @@ export async function attachPaymentIntentToRegistration({
   rawPayment?: unknown;
 }) {
   const db = getDb();
+  const [existing] = await db
+    .select({ rawPayment: registrations.rawPayment })
+    .from(registrations)
+    .where(eq(registrations.id, registrationId))
+    .limit(1);
   const [registration] = await db
     .update(registrations)
     .set({
       paymentIntentId,
-      rawPayment: rawPayment ?? null,
+      rawPayment: mergeProviderPayment(existing?.rawPayment, rawPayment),
       updatedAt: new Date(),
     })
     .where(eq(registrations.id, registrationId))
@@ -223,13 +249,18 @@ export async function markRegistrationPaid({
   const whereClause = registrationId
     ? eq(registrations.id, registrationId)
     : eq(registrations.paymentIntentId, paymentIntentId as string);
+  const [existing] = await db
+    .select({ rawPayment: registrations.rawPayment })
+    .from(registrations)
+    .where(whereClause)
+    .limit(1);
 
   const [registration] = await db
     .update(registrations)
     .set({
       status: "paid",
       paymentIntentId: paymentIntentId ?? undefined,
-      rawPayment: rawPayment ?? undefined,
+      rawPayment: mergeProviderPayment(existing?.rawPayment, rawPayment),
       paidAt: new Date(),
       updatedAt: new Date(),
     })
@@ -258,18 +289,56 @@ export async function updateRegistrationStatus({
   const whereClause = registrationId
     ? eq(registrations.id, registrationId)
     : eq(registrations.paymentIntentId, paymentIntentId as string);
+  const [existing] = await db
+    .select({ rawPayment: registrations.rawPayment })
+    .from(registrations)
+    .where(whereClause)
+    .limit(1);
 
   const [registration] = await db
     .update(registrations)
     .set({
       status,
       paymentIntentId: paymentIntentId ?? undefined,
-      rawPayment: rawPayment ?? undefined,
+      rawPayment: mergeProviderPayment(existing?.rawPayment, rawPayment),
       updatedAt: new Date(),
     })
     .where(whereClause)
     .returning();
 
+  return registration;
+}
+
+export async function getRegistrationForRefund(registrationId: string) {
+  const db = getDb();
+  const [registration] = await db
+    .select()
+    .from(registrations)
+    .where(eq(registrations.id, registrationId))
+    .limit(1);
+  return registration;
+}
+
+export async function recordRegistrationRefund({
+  registrationId,
+  refund,
+}: {
+  registrationId: string;
+  refund: Record<string, any>;
+}) {
+  const db = getDb();
+  const completed = refund.status === "completed";
+  const [registration] = await db
+    .update(registrations)
+    .set({
+      status: completed ? "refunded" : "refund_pending",
+      refundId: refund.id,
+      refundStatus: refund.status,
+      refundedAt: completed ? new Date() : undefined,
+      updatedAt: new Date(),
+    })
+    .where(eq(registrations.id, registrationId))
+    .returning();
   return registration;
 }
 
@@ -284,6 +353,9 @@ export async function listRegistrations(status?: string) {
       paymentProvider: registrations.paymentProvider,
       paymentIntentId: registrations.paymentIntentId,
       operationId: registrations.operationId,
+      refundId: registrations.refundId,
+      refundStatus: registrations.refundStatus,
+      refundedAt: registrations.refundedAt,
       paidAt: registrations.paidAt,
       createdAt: registrations.createdAt,
       customerName: customers.name,
@@ -311,6 +383,9 @@ export async function listRegistrations(status?: string) {
       paymentProvider: row.paymentProvider,
       paymentIntentId: row.paymentIntentId,
       operationId: row.operationId,
+      refundId: row.refundId,
+      refundStatus: row.refundStatus,
+      refundedAt: row.refundedAt,
       paidAt: row.paidAt,
       createdAt: row.createdAt,
       customer: {

@@ -4,9 +4,9 @@ import { motion } from "framer-motion";
 import AppStoreBadges from "./AppStoreBadges";
 import logo from "@assets/Fitnet_Logo_White_1765019936769.png";
 import { useLanguage } from "@/lib/i18n";
-
-const whatsappMessage = "مرحبا! بدي اشترك بتحدي الكوتش طارق";
-const whatsappUrl = `https://wa.me/9647513855361?text=${encodeURIComponent(whatsappMessage)}`;
+import { useCoach } from "@/lib/coach";
+import { getSyriaWhatsappUrl } from "@/lib/packages";
+import { pushDataLayerEvent } from "@/lib/tracking";
 
 const WhatsAppLogo = ({ className }: { className?: string }) => (
   <svg
@@ -61,6 +61,16 @@ const StepCard = ({ number, title, delay, icon: Icon, children }: StepProps) => 
 
 export default function HowItWorks() {
   const { t, isArabic } = useLanguage();
+  const coach = useCoach();
+  const whatsappUrl = getSyriaWhatsappUrl(coach, "premium-single");
+  const trackSyriaPayment = () => {
+    pushDataLayerEvent("payment_started", "premium-single", {
+      cta_location: "how_it_works",
+      page_type: "homepage",
+      payment_method: "whatsapp_manual",
+      payment_path: "syria",
+    });
+  };
 
   return (
     <section id="how-it-works" className="relative py-24">
@@ -96,11 +106,12 @@ export default function HowItWorks() {
             <p className="text-center text-lg font-extrabold text-primary">
               {t.how.whatsappHint}
             </p>
-            <motion.a
+            {whatsappUrl ? <motion.a
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
               aria-label={t.how.whatsappLabel}
+              onClick={trackSyriaPayment}
               animate={{ scale: [1, 1.08, 1], y: [0, -3, 0] }}
               transition={{ duration: 1.4, repeat: Infinity, repeatDelay: 0.8, ease: "easeInOut" }}
               whileHover={{ scale: 1.1 }}
@@ -109,7 +120,7 @@ export default function HowItWorks() {
             >
               <span className="pointer-events-none absolute inset-0 rounded-full bg-[#25D366]/40 animate-ping" />
               <WhatsAppLogo className="relative z-10 h-11 w-11" />
-            </motion.a>
+            </motion.a> : null}
           </StepCard>
 
           <StepCard number="02" title={t.how.download} delay={0.2} icon={Download}>

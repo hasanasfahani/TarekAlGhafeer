@@ -63,3 +63,8 @@ alter table registrations
   add column if not exists confirmation_email_status text,
   add column if not exists confirmation_email_error text,
   add column if not exists confirmation_email_message_id text;
+
+alter table registrations
+  add column if not exists refund_id text,
+  add column if not exists refund_status text,
+  add column if not exists refunded_at timestamptz;

@@ -2,46 +2,49 @@ import { Button } from "@/components/ui/button";
 import { Languages } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/lib/i18n";
+import { useCoach } from "@/lib/coach";
 
 const sectionIds = ["hero", "benefits", "packages", "results"] as const;
 type SectionId = (typeof sectionIds)[number];
 
 export default function Navbar() {
+  const coach = useCoach();
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState<SectionId>("hero");
   const { t, toggleLanguage, isArabic } = useLanguage();
 
   useEffect(() => {
-    const handleScroll = () => {
+    let animationFrame = 0;
+
+    const updateFromScrollPosition = () => {
       setIsScrolled(window.scrollY > 10);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
-  useEffect(() => {
-    const sections = sectionIds
-      .map((id) => document.getElementById(id))
-      .filter((section): section is HTMLElement => Boolean(section));
+      const marker = window.scrollY + Math.min(window.innerHeight * 0.35, 240);
+      let currentSection: SectionId = "hero";
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-
-        if (visible && sectionIds.includes(visible.target.id as SectionId)) {
-          setActiveSection(visible.target.id as SectionId);
+      for (const id of sectionIds) {
+        const section = document.getElementById(id);
+        if (section && section.offsetTop <= marker) {
+          currentSection = id;
         }
-      },
-      {
-        rootMargin: "-25% 0px -60% 0px",
-        threshold: [0, 0.1, 0.25, 0.5],
-      },
-    );
+      }
 
-    sections.forEach((section) => observer.observe(section));
-    return () => observer.disconnect();
+      setActiveSection(currentSection);
+    };
+
+    const handleScroll = () => {
+      window.cancelAnimationFrame(animationFrame);
+      animationFrame = window.requestAnimationFrame(updateFromScrollPosition);
+    };
+
+    updateFromScrollPosition();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("resize", handleScroll);
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleScroll);
+    };
   }, []);
 
   const navItems: Array<{ id: SectionId; label: string }> = [
@@ -100,7 +103,7 @@ export default function Navbar() {
       <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-3" dir="ltr">
         <a href="/" className="flex shrink-0 items-center gap-2 text-left">
           <span className="whitespace-nowrap font-heading text-xl font-bold tracking-tighter text-white md:text-2xl">
-            Tarek AlGhafeer
+            {coach.name}
           </span>
         </a>
 

@@ -5,6 +5,7 @@ import {
   sendConfirmationEmailForRegistration,
 } from "../_lib/registrations.js";
 
+const ziinaApiBaseUrl = "https://api-v2.ziina.com/api";
 type VercelLikeRequest = {
   method?: string;
   headers: Record<string, string | string[] | undefined>;
@@ -45,9 +46,26 @@ export default async function handler(req: VercelLikeRequest, res: VercelLikeRes
       })
       .parse(req.body ?? {});
 
+    if (!body.paymentIntentId || !process.env.ZIINA_API_KEY) {
+      return res.status(400).json({
+        message: "A Ziina payment intent is required for payment confirmation.",
+      });
+    }
+    const ziinaResponse = await fetch(
+      `${ziinaApiBaseUrl}/payment_intent/${encodeURIComponent(body.paymentIntentId)}`,
+      { headers: { Authorization: `Bearer ${process.env.ZIINA_API_KEY}` } },
+    );
+    const payment = await ziinaResponse.json().catch(() => null);
+    if (!ziinaResponse.ok || payment?.status !== "completed") {
+      return res.status(409).json({
+        message: "Payment has not been confirmed by Ziina.",
+        status: payment?.status || null,
+      });
+    }
+
     const registration = await markRegistrationPaid({
-      registrationId: body.registrationId,
       paymentIntentId: body.paymentIntentId,
+      rawPayment: payment,
     });
 
     if (!registration) {

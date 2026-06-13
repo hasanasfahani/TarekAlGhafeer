@@ -1,33 +1,33 @@
-export type PackageId = "free" | "premium-single" | "premium-duo";
+import type { CoachConfig, PackageId } from "@shared/coaches";
+export type { PackageId } from "@shared/coaches";
 
 export type ChallengePackage = {
   id: PackageId;
   price: number;
+  originalPrice?: number;
   currency: "AED";
   whatsappMessage?: string;
 };
 
-export const challengePackages: Record<PackageId, ChallengePackage> = {
-  free: {
-    id: "free",
-    price: 0,
-    currency: "AED",
-  },
-  "premium-single": {
-    id: "premium-single",
-    price: 149,
-    currency: "AED",
-    whatsappMessage:
-      "مرحبا! بدي اشترك بتحدي الكوتش طارق الباقة البريميوم الفردية",
-  },
-  "premium-duo": {
-    id: "premium-duo",
-    price: 249,
-    currency: "AED",
-    whatsappMessage:
-      "مرحبا! بدي اشترك بتحدي الكوتش طارق الباقة البريميوم الثنائية",
-  },
-};
+export function getChallengePackages(coach: CoachConfig): Record<PackageId, ChallengePackage> {
+  return {
+    free: { id: "free", price: 0, currency: "AED" },
+    "premium-single": {
+      id: "premium-single",
+      price: coach.packages["premium-single"].price,
+      originalPrice: coach.packages["premium-single"].originalPrice,
+      currency: "AED",
+      whatsappMessage: `مرحبا! بدي اشترك بتحدي الكوتش ${coach.arabicFirstName} الباقة البريميوم الفردية`,
+    },
+    "premium-duo": {
+      id: "premium-duo",
+      price: coach.packages["premium-duo"].price,
+      originalPrice: coach.packages["premium-duo"].originalPrice,
+      currency: "AED",
+      whatsappMessage: `مرحبا! بدي اشترك بتحدي الكوتش ${coach.arabicFirstName} الباقة البريميوم الثنائية`,
+    },
+  };
+}
 
 export function isPackageId(value: unknown): value is PackageId {
   return (
@@ -37,8 +37,8 @@ export function isPackageId(value: unknown): value is PackageId {
   );
 }
 
-export function getSyriaWhatsappUrl(packageId: PackageId) {
-  const message = challengePackages[packageId].whatsappMessage;
+export function getSyriaWhatsappUrl(coach: CoachConfig, packageId: PackageId) {
+  const message = getChallengePackages(coach)[packageId].whatsappMessage;
   return message
     ? `https://wa.me/9647513855361?text=${encodeURIComponent(message)}`
     : null;
