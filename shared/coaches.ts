@@ -65,7 +65,7 @@ export const coachConfigs = {
     id: "abdulrahman_katlan",
     name: "Abdulrahman Katlan",
     firstName: "Abdulrahman",
-    arabicFirstName: "عبدالرحمن",
+    arabicFirstName: "عبد الرحمن",
     domain: "abdulrahman-katlan.fitnetapp.com",
     coachSlug: "abdulrahman-katlan",
     challengeId: "abdulrahman_katlan_challenge",
@@ -78,8 +78,8 @@ export const coachConfigs = {
     seo: {
       title: "Coach Abdulrahman Katlan Fitness Challenge | Fitnet",
       description: "Join Coach Abdulrahman Katlan's Fitnet challenge for guided workouts, nutrition support, progress tracking, and a motivating fitness community.",
-      titleAr: "تحدي كوتش عبدالرحمن كاتلان للياقة | Fitnet",
-      descriptionAr: "انضم إلى تحدي كوتش عبدالرحمن كاتلان على Fitnet مع خطة تمارين وتغذية، متابعة مستمرة، ومجتمع يساعدك على تحقيق هدفك.",
+      titleAr: "تحدي كوتش عبد الرحمن قتلان للياقة | Fitnet",
+      descriptionAr: "انضم إلى تحدي كوتش عبد الرحمن قتلان على Fitnet مع خطة تمارين وتغذية، متابعة مستمرة، ومجتمع يساعدك على تحقيق هدفك.",
     },
   },
   "loay-hamdan": {

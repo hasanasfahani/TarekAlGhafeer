@@ -2,19 +2,32 @@ import { Button } from "@/components/ui/button";
 import { Info } from "lucide-react";
 import { motion } from "framer-motion";
 import coachTarek from "@assets/optimized/coach-tarek-hero.webp";
+import coachAbdulrahman from "@assets/optimized/abdulrahman-hero.jpg";
+import coachLoay from "@assets/optimized/loay-hero.jpeg";
+import coachKaram from "@assets/optimized/karam-hero.jpg";
 import { useLanguage } from "@/lib/i18n";
-import { useCoach } from "@/lib/coach";
+import { getLocalCoachOverride, useCoach } from "@/lib/coach";
 import { pushDataLayerEvent } from "@/lib/tracking";
 
 export default function Hero() {
   const coach = useCoach();
   const { t, isArabic } = useLanguage();
+  const heroImage = coach.id === "abdulrahman_katlan"
+    ? coachAbdulrahman
+    : coach.id === "loay_hamdan"
+      ? coachLoay
+      : coach.id === "karam_alhemesh"
+        ? coachKaram
+        : coachTarek;
   const openRegistrationForm = () => {
     pushDataLayerEvent("registration_form_start", "premium-single", {
       cta_location: "main_hero",
       page_type: "homepage",
     });
-    window.location.href = "/registration-form";
+    const localCoachOverride = getLocalCoachOverride();
+    window.location.href = localCoachOverride
+      ? `/registration-form?coach=${encodeURIComponent(localCoachOverride)}`
+      : "/registration-form";
   };
 
   return (
@@ -22,7 +35,7 @@ export default function Hero() {
       {/* Background Image with Effects */}
       <div className="absolute inset-0 z-0">
         <img 
-          src={coachTarek} 
+          src={heroImage}
           alt={`Coach ${coach.name}`}
           className="absolute inset-0 w-full h-full object-cover object-top"
           loading="eager"

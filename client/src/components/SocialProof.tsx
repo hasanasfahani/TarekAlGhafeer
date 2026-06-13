@@ -5,8 +5,15 @@ import { useCoach } from "@/lib/coach";
 import transformation1 from "@assets/optimized/tarek-transformation-1.webp";
 import transformation2 from "@assets/optimized/tarek-transformation-2.webp";
 import transformation3 from "@assets/optimized/tarek-transformation-3.webp";
+import abdulrahmanTransformation1 from "@assets/optimized/abdulrahman-transformation-1.jpg";
+import abdulrahmanTransformation2 from "@assets/optimized/abdulrahman-transformation-2.jpg";
+import loayTransformation1 from "@assets/optimized/loay-transformation-1.jpg";
+import loayTransformation2 from "@assets/optimized/loay-transformation-2.jpg";
+import loayTransformation3 from "@assets/optimized/loay-transformation-3.jpg";
+import karamTransformation1 from "@assets/optimized/karam-transformation-1.jpg";
+import karamTransformation2 from "@assets/optimized/karam-transformation-2.jpg";
 
-const transformations = [
+const tarekTransformations = [
   {
     image: transformation1,
     label: "Amazing Progress",
@@ -38,15 +45,71 @@ const CounterCard = ({ number, label, icon: Icon }: { number: string; label: str
   );
 };
 
-const TransformationGallery = () => {
+const TransformationGallery = ({
+  coachId,
+}: {
+  coachId: string;
+}) => {
   const { t } = useLanguage();
+  const customTransformations = coachId === "abdulrahman_katlan"
+    ? [
+        {
+          image: abdulrahmanTransformation1,
+          label: "Transformation Result 1",
+          description: "",
+        },
+        {
+          image: abdulrahmanTransformation2,
+          label: "Transformation Result 2",
+          description: "",
+        },
+      ]
+    : coachId === "loay_hamdan"
+      ? [
+          {
+            image: loayTransformation1,
+            label: "Transformation Result 1",
+            description: "",
+          },
+          {
+            image: loayTransformation2,
+            label: "Transformation Result 2",
+            description: "",
+          },
+          {
+            image: loayTransformation3,
+            label: "Transformation Result 3",
+            description: "",
+          },
+        ]
+      : coachId === "karam_alhemesh"
+        ? [
+            {
+              image: karamTransformation1,
+              label: "Transformation Result 1",
+              description: "",
+            },
+            {
+              image: karamTransformation2,
+              label: "Transformation Result 2",
+              description: "",
+            },
+          ]
+      : null;
+  const transformations = customTransformations || tarekTransformations;
   const localizedTransformations = transformations.map((item, index) => ({
     ...item,
-    ...t.social.transformations[index],
+    ...(customTransformations ? {} : t.social.transformations[index]),
   }));
 
   return (
-    <div className="mx-auto mt-12 grid w-full max-w-5xl grid-cols-1 gap-4 px-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div
+      className={`mx-auto mt-12 grid w-full gap-4 px-4 sm:grid-cols-2 ${
+        coachId === "abdulrahman_katlan" || coachId === "karam_alhemesh"
+          ? "max-w-3xl"
+          : "max-w-5xl lg:grid-cols-3"
+      }`}
+    >
       {localizedTransformations.map((item, index) => (
         <div key={index} className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-white/10 bg-black/50">
           <img
@@ -67,6 +130,24 @@ const TransformationGallery = () => {
 export default function SocialProof() {
   const coach = useCoach();
   const { t, isArabic } = useLanguage();
+  const isAbdulrahman = coach.id === "abdulrahman_katlan";
+  const isLoay = coach.id === "loay_hamdan";
+  const yearsNumber = isAbdulrahman
+    ? "+6"
+    : isLoay
+      ? "+8"
+      : t.social.yearsNumber;
+  const yearsLabel = isAbdulrahman || isLoay
+    ? isArabic ? "سنين خبرة" : "Years of experience"
+    : t.social.yearsLabel;
+  const traineesNumber = isAbdulrahman
+    ? "+100"
+    : isLoay
+      ? "+300"
+      : t.social.traineesNumber;
+  const traineesLabel = isAbdulrahman || isLoay
+    ? isArabic ? "متدرّب" : "Trainees"
+    : t.social.traineesLabel;
 
   return (
     <section id="results" className="scroll-mt-24 py-20 bg-black/50">
@@ -78,8 +159,8 @@ export default function SocialProof() {
         </div>
 
         <div className="grid grid-cols-2 gap-4 max-w-2xl mx-auto mb-12">
-          <CounterCard number={t.social.yearsNumber} label={t.social.yearsLabel} icon={Trophy} />
-          <CounterCard number={t.social.traineesNumber} label={t.social.traineesLabel} icon={Users} />
+          <CounterCard number={yearsNumber} label={yearsLabel} icon={Trophy} />
+          <CounterCard number={traineesNumber} label={traineesLabel} icon={Users} />
         </div>
 
         <a
@@ -111,7 +192,7 @@ export default function SocialProof() {
           />
         </a>
 
-        <TransformationGallery />
+        <TransformationGallery coachId={coach.id} />
       </div>
     </section>
   );

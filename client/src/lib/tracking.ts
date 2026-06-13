@@ -1,5 +1,6 @@
 import type { PackageId } from "@shared/coaches";
-import { getCoachConfigByHostname, getPackageConfig } from "@shared/coaches";
+import { getPackageConfig } from "@shared/coaches";
+import { getActiveCoachConfig } from "@/lib/coach";
 
 declare global {
   interface Window {
@@ -8,7 +9,7 @@ declare global {
 }
 
 export function getTrackingConfig(packageId: PackageId = "premium-single") {
-  const coach = getCoachConfigByHostname(window.location.hostname);
+  const coach = getActiveCoachConfig();
   const selectedPackage = getPackageConfig(coach, packageId);
   return {
     coach_id: coach.id,

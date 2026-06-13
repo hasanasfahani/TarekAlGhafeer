@@ -22,9 +22,9 @@ import AppStoreBadges from "@/components/AppStoreBadges";
 import PaymentCheckoutDialog from "@/components/PaymentCheckoutDialog";
 import PackagesTable from "@/components/PackagesTable";
 import { Button } from "@/components/ui/button";
+import { getActiveCoachConfig } from "@/lib/coach";
 import { useLanguage } from "@/lib/i18n";
 import { isPackageId, type PackageId } from "@/lib/packages";
-import { getCoachConfigByHostname } from "@shared/coaches";
 import { pushDataLayerEvent as pushTrackedEvent } from "@/lib/tracking";
 import enterCodeScreenshot from "@assets/registration-success/enter-code.webp";
 import registerTraineeScreenshot from "@assets/registration-success/register-trainee.webp";
@@ -32,6 +32,13 @@ import selectChallengeScreenshot from "@assets/registration-success/select-chall
 import transformation1 from "@assets/optimized/tarek-transformation-1.webp";
 import transformation2 from "@assets/optimized/tarek-transformation-2.webp";
 import transformation3 from "@assets/optimized/tarek-transformation-3.webp";
+import abdulrahmanTransformation1 from "@assets/optimized/abdulrahman-transformation-1.jpg";
+import abdulrahmanTransformation2 from "@assets/optimized/abdulrahman-transformation-2.jpg";
+import loayTransformation1 from "@assets/optimized/loay-transformation-1.jpg";
+import loayTransformation2 from "@assets/optimized/loay-transformation-2.jpg";
+import loayTransformation3 from "@assets/optimized/loay-transformation-3.jpg";
+import karamTransformation1 from "@assets/optimized/karam-transformation-1.jpg";
+import karamTransformation2 from "@assets/optimized/karam-transformation-2.jpg";
 import challengeMainPreview from "@assets/registration-flow/challenge-main.jpg";
 import challengeLeaderboardPreview from "@assets/registration-flow/challenge-leaderboard.jpg";
 import traineeHomePreview from "@assets/registration-flow/trainee-home.jpg";
@@ -57,9 +64,7 @@ declare global {
   }
 }
 
-const activeCoach = getCoachConfigByHostname(
-  typeof window === "undefined" ? undefined : window.location.hostname,
-);
+const activeCoach = getActiveCoachConfig();
 const fixedPaymentValue = activeCoach.packages["premium-single"].price;
 const fixedPaymentCurrency = "AED";
 
@@ -357,19 +362,28 @@ function getSavedStepIndex(paymentStatus: string | null) {
 }
 
 function CompactResultsProof({ isArabic }: { isArabic: boolean }) {
+  const isAbdulrahman = activeCoach.id === "abdulrahman_katlan";
+  const isLoay = activeCoach.id === "loay_hamdan";
+  const isKaram = activeCoach.id === "karam_alhemesh";
   const stats = [
     {
       icon: Trophy,
-      value: "+10",
+      value: isAbdulrahman ? "+6" : isLoay ? "+8" : "+10",
       label: isArabic ? "سنين خبرة" : "Years of experience",
     },
     {
       icon: Users,
-      value: "+500",
+      value: isAbdulrahman ? "+100" : isLoay ? "+300" : "+500",
       label: isArabic ? "متدرّب" : "Trainees",
     },
   ];
-  const photos = [transformation1, transformation2, transformation3];
+  const photos = isAbdulrahman
+    ? [abdulrahmanTransformation1, abdulrahmanTransformation2]
+    : isLoay
+      ? [loayTransformation1, loayTransformation2, loayTransformation3]
+      : isKaram
+        ? [karamTransformation1, karamTransformation2]
+      : [transformation1, transformation2, transformation3];
 
   return (
     <div className="mt-7 rounded-2xl border border-primary/20 bg-primary/10 p-3 sm:p-4">
